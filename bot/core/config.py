@@ -1,23 +1,44 @@
 from pydantic_settings import BaseSettings
 from pydantic import SecretStr
 
-class Settings(BaseSettings):
-    bot_token: SecretStr
+
+class PostgresSettings(BaseSettings):
+    user: str
+    password: SecretStr
+    db: str
+    host: str = "db"
+    port: int = 5432
+
+    @property
+    def async_url(self) -> str:
+        return f"postgresql+asyncpg://{self.user}:{self.password.get_secret_value()}@{self.host}:{self.port}/{self.db}"
+
+
+class RedisSettings(BaseSettings):
+    url: str = "redis://redis:6379/0"
+
+
+class NatsSettings(BaseSettings):
+    url: str = "nats://nats:4222"
+
+
+class BotSettings(BaseSettings):
+    token: SecretStr
+    admin_id: int
+    locale_path: str = "./locales"
+
+
+class AppSettings(BaseSettings):
     fernet_secret: SecretStr
 
-    postgres_pass: SecretStr
-    postgres_user: str
-    postgres_db: str
-
-    database_url: str
-    redis_url: str
-    nats_url: str
-    
-    admin_id: int
-
-    locale_path: str = "./locales"
+    postgres: PostgresSettings
+    redis: RedisSettings
+    nats: NatsSettings
+    bot: BotSettings
 
     class Config:
         env_file = ".env"
+        env_nested_delimiter = '__'
 
-settings = Settings()
+
+settings = AppSettings()

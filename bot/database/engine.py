@@ -14,7 +14,7 @@ class Base(DeclarativeBase):
         DateTime(), default=datetime.now, onupdate=datetime.now)
 
 
-engine = create_async_engine(settings.database_url, echo=True)
+engine = create_async_engine(settings.postgres.async_url, echo=True)
 
 
 session_maker = async_sessionmaker(

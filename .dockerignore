@@ -1,0 +1,43 @@
+# Общие
+__pycache__/
+*.py[cod]
+*.log
+*.sqlite3
+*.db
+*.pid
+*.swp
+*.swo
+.env
+.env.*
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Mac / Linux / Windows
+.DS_Store
+Thumbs.db
+
+# Alembic
+bot/database/migrations/versions/*.pyc
+bot/database/migrations/__pycache__/
+
+# Byte-compiled / cache
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Other
+*.bak
+*.tmp
+*.old

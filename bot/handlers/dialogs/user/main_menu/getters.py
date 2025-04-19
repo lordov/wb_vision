@@ -19,4 +19,4 @@ async def user_panel_text(
     event_from_user: User,
     **kwargs
 ) -> str:
-    return {'user_panel': i18n.get('user-panel')}
+    return {'hello_message': i18n.get('hello-message')}

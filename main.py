@@ -15,6 +15,7 @@ from redis.exceptions import ConnectionError
 
 from bot.core.config import settings
 # from tgbot.dialogs.admin_dialog import admin_panel
+from bot.core.logging import setup_logging, logger
 from bot.handlers.dialogs.user.main_menu.dialog import user_panel
 # from tgbot.dialogs.broadcast_dialog import broadcast_dialog
 
@@ -78,7 +79,7 @@ async def setup_bot(dp: Dispatcher) -> Bot:
         Bot: The aiogram bot object.
     """
     bot: Bot = Bot(
-        token=settings.bot_token.get_secret_value(),
+        token=settings.bot.token.get_secret_value(),
         default=DefaultBotProperties(
             parse_mode=ParseMode.HTML
         )
@@ -93,8 +94,8 @@ async def setup_bot(dp: Dispatcher) -> Bot:
 
 
 async def main():
-    logger = logging.getLogger('app_error_logger')
-
+    setup_logging()
+    logger.info('Starting bot...', context='init')
     # Set up the dispatcher with the chosen storage
     dp: Dispatcher = await setup_dispatcher()
 
@@ -107,7 +108,7 @@ async def main():
     # nc, js = await connect_to_nats(servers=settings.nats_url)
 
     try:
-        await bot.send_message(settings.admin_id, f'Бот запущен.')
+        await bot.send_message(settings.bot.admin_id, f'Бот запущен.')
     except Exception as e:
         print(e)
     translator_hub: TranslatorHub = create_translator_hub()

@@ -3,7 +3,7 @@ version: "3.9"
 services:
   bot:
     build: .
-    container_name: wb_notify_bot
+    container_name: bot
     command: ["python", "main.py"]
     env_file: .env
     depends_on:
@@ -12,25 +12,37 @@ services:
       - nats
     restart: always
 
-  worker:
+  # worker:
+  #   build: .
+  #   container_name: worker
+  #   command: [ "taskiq", "worker", "taskiq_worker:broker" ]
+  #   env_file: .env
+  #   depends_on:
+  #     - bot
+  #     - db
+  #     - redis
+  #     - nats
+  #   restart: always
+
+  migrate:
     build: .
-    container_name: wb_notify_worker
-    command: ["taskiq", "taskiq_worker:broker"]
+    container_name: migrate
+    command: [ "alembic", "upgrade", "head" ]
     env_file: .env
+    volumes:
+      - .:/app
+    working_dir: /app
     depends_on:
-      - bot
       - db
-      - redis
-      - nats
-    restart: always
+    restart: "no" # однократный запуск
 
   db:
     image: postgres:latest
     container_name: postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASS}
+      POSTGRES_DB: ${POSTGRES__DB}
+      POSTGRES_USER: ${POSTGRES__USER}
+      POSTGRES_PASSWORD: ${POSTGRES__PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -49,8 +61,13 @@ services:
     container_name: nats
     ports:
       - "4222:4222"
-      - "8222:8222"  # Monitoring
+      - "8222:8222" # Monitoring
+    volumes:
+      - nats_data:/data
+    command: >
+      -js -sd /data
     restart: always
 
 volumes:
   pgdata:
+  nats_data:

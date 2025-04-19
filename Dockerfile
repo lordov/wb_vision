@@ -1,4 +1,4 @@
-FROM python:3.12:slim
+FROM python:3.12-slim
 
 # Установка системных зависимостей
 RUN apt-get update && apt-get install -y \
@@ -9,16 +9,12 @@ RUN apt-get update && apt-get install -y \
 # Создание рабочей директории
 WORKDIR /app
 
-# Установка Poetry (по желанию можно на pip)
-RUN pip install --upgrade pip && pip install poetry
+# Обновление pip и установка зависимостей
+COPY requirements.txt .
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Копирование зависимостей и установка
-COPY pyproject.toml poetry.lock ./
-RUN poetry config virtualenvs.create false \
-    && poetry install --only main
-
-# Копируем весь код
+# Копируем весь проект
 COPY . .
 
-# Команда запуска (будет переопределяться в docker-compose)
+# Команда по умолчанию (может переопределяться в docker-compose)
 CMD ["python", "main.py"]
