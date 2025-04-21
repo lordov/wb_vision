@@ -44,11 +44,12 @@ class Subscription(Base):
     # trial, monthly, quarterly, yearly
     plan: Mapped[str] = mapped_column(String(50))
     started_at: Mapped[datetime] = mapped_column(
-        DateTime(), default=datetime.utcnow)
+        DateTime(), default=datetime.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime())
 
     user: Mapped["User"] = relationship(back_populates="subscriptions")
-    payments: Mapped[list["Payment"]] = relationship(back_populates="subscription")
+    payments: Mapped[list["Payment"]] = relationship(
+        back_populates="subscription")
 
 
 class Employee(Base):
@@ -67,7 +68,7 @@ class Payment(Base):
     __tablename__ = "payments"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.telegram_id"))
     subscription_id: Mapped[int] = mapped_column(
         ForeignKey("subscriptions.id"), nullable=True)
 
@@ -83,3 +84,9 @@ class Payment(Base):
     user: Mapped["User"] = relationship(back_populates="payments")
     subscription: Mapped["Subscription"] = relationship(
         back_populates="payments")
+
+
+if __name__ == '__main__':
+    print(f'{__name__} Запущен самостоятельно')
+else:
+    print(f'{__name__} Запущен как модуль')

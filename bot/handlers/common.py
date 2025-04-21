@@ -1,13 +1,15 @@
 from aiogram import Bot, Router
 from aiogram import F
 from aiogram.fsm.context import FSMContext
-from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.filters import Command, CommandStart
+from aiogram.types import Message, BotCommand
 
 from aiogram_dialog import DialogManager, ShowMode, StartMode
 
 from fluentogram import TranslatorRunner
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from bot.database.uow import UnitOfWork
 from .states import UserPanel, Support
 from bot.core.config import settings
 
@@ -15,12 +17,29 @@ from bot.core.config import settings
 router = Router()
 
 
-@router.message(Command('start'))
+@router.startup()
+async def on_startup(bot: Bot):
+    # Список команд, которые будут отображаться пользователю
+    commands = [
+        BotCommand(command="/support", description="🧑‍💻 Поддержка"),
+        BotCommand(command="/lk", description="👤 Личный кабинет"),
+        # Можно добавить другие команды
+    ]
+    # Устанавливаем команды для бота
+    await bot.set_my_commands(commands)
+
+
+@router.message(CommandStart())
 async def cmd_start(
     message: Message,
-    session: AsyncSession,
+    uow: UnitOfWork,
     dialog_manager: DialogManager,
 ):
+    user = await uow.users.get_or_create(
+        message.from_user.id,
+        message.from_user.username,
+        message.from_user.language_code
+    )
     await dialog_manager.start(state=UserPanel.start, mode=StartMode.RESET_STACK)
 
 

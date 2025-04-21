@@ -13,7 +13,7 @@ from nats.aio.msg import Msg
 from nats.js import JetStreamContext
 from nats.js.api import ConsumerConfig
 
-from bot.database.engine import session_maker
+from bot.database.engine import async_session_maker
 
 
 error_logger = logging.getLogger('app_error_logger')
@@ -107,6 +107,6 @@ async def send_broadcast_message(
                     reply_markup=keyboard
                 )
     except TelegramForbiddenError:
-        async with session_maker() as session:
+        async with async_session_maker() as session:
             ...
             # await mark_user_blocked(session, chat_id)

@@ -19,10 +19,10 @@ from bot.core.logging import setup_logging, logger
 from bot.handlers.dialogs.user.main_menu.dialog import user_panel
 # from tgbot.dialogs.broadcast_dialog import broadcast_dialog
 
-from bot.database.engine import session_maker, engine
+from bot.database.engine import async_session_maker, engine
 # from tgbot.services.scheduler.scheduler import (
 #     setup_tasks, start_scheduler, TaskFactory)
-from bot.middlewares.db_session import DataBaseSession
+from bot.middlewares.uow import UnitOfWorkMiddleware
 from bot.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.utils.logger_config import configure_logging
 from bot.utils.i18n import create_translator_hub
@@ -61,7 +61,8 @@ async def setup_dispatcher() -> Dispatcher:
 
     # Create a dispatcher with the chosen storage
     dp = Dispatcher(db_engine=engine, storage=storage)
-    dp.update.outer_middleware(DataBaseSession(session_pool=session_maker))
+    dp.update.outer_middleware(UnitOfWorkMiddleware(
+        session_pool=async_session_maker))
     dp.update.middleware(TranslatorRunnerMiddleware())
 
     return dp
@@ -101,7 +102,6 @@ async def main():
 
     # Set up the bot with the provided token and default properties
     bot: Bot = await setup_bot(dp)
-
 
     # Подключаемся к Nats и получаем ссылки на клиент и JetStream-контекст
 

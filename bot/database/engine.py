@@ -17,7 +17,7 @@ class Base(DeclarativeBase):
 engine = create_async_engine(settings.postgres.async_url, echo=True)
 
 
-session_maker = async_sessionmaker(
+async_session_maker = async_sessionmaker(
     bind=engine, class_=AsyncSession, expire_on_commit=False)
 
 
