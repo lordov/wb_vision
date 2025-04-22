@@ -31,6 +31,8 @@ class UserRepository(SQLAlchemyRepository[User]):
         try:
             user = await self.get_by_telegram_id(telegram_id)
             if user:
+                if user.is_blocked:
+                    user.is_blocked = False
                 logger.info("user.exists", telegram_id=telegram_id)
                 return user
 

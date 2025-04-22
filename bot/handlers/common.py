@@ -4,10 +4,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message, BotCommand
 
-from aiogram_dialog import DialogManager, ShowMode, StartMode
+from aiogram_dialog import DialogManager, StartMode
 
 from fluentogram import TranslatorRunner
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database.uow import UnitOfWork
 from .states import UserPanel, Support
@@ -25,6 +24,8 @@ async def on_startup(bot: Bot):
         BotCommand(command="/lk", description="👤 Личный кабинет"),
         # Можно добавить другие команды
     ]
+    await bot.delete_my_commands()
+    # Псмотреть манул по командам для разных языков
     # Устанавливаем команды для бота
     await bot.set_my_commands(commands)
 
@@ -33,14 +34,19 @@ async def on_startup(bot: Bot):
 async def cmd_start(
     message: Message,
     uow: UnitOfWork,
-    dialog_manager: DialogManager,
+    i18n: TranslatorRunner,
 ):
-    user = await uow.users.get_or_create(
+    await uow.users.get_or_create(
         message.from_user.id,
         message.from_user.username,
         message.from_user.language_code
     )
-    await dialog_manager.start(state=UserPanel.start, mode=StartMode.RESET_STACK)
+    await message.answer(i18n.get('hello-message'))
+
+
+@router.message(Command('lk'))
+async def lk_start(message: Message, dialog_manager: DialogManager):
+    await dialog_manager.start(UserPanel.start, mode=StartMode.RESET_STACK)
 
 
 @router.message(Command('support'))
@@ -74,7 +80,7 @@ async def question_from_user(
     # Обрабоотку медиа груп необходимо предоставить
     if message.photo:
         await bot.send_photo(
-            settings.admin_id,
+            settings.bot.admin_id,
             photo=message.photo[-1].file_id,  # самое большое
             caption=caption
         )
@@ -86,25 +92,25 @@ async def question_from_user(
         )
     elif message.video:
         await bot.send_video(
-            settings.admin_id,
+            settings.bot.admin_id,
             video=message.video.file_id,
             caption=caption
         )
     elif message.audio:
         await bot.send_audio(
-            settings.admin_id,
+            settings.bot.admin_id,
             audio=message.audio.file_id,
             caption=caption
         )
     elif message.voice:
         await bot.send_voice(
-            settings.admin_id,
+            settings.bot.admin_id,
             voice=message.voice.file_id,
             caption=caption
         )
     elif message.text:
         await bot.send_message(
-            settings.admin_id,
+            settings.bot.admin_id,
             caption  # просто текст с подписью
         )
 

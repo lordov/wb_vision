@@ -25,7 +25,7 @@ class UnitOfWorkMiddleware(BaseMiddleware):
                 result = await handler(event, data)
                 await uow.commit()
                 return result
-            except Exception:
+            except Exception as e:
                 await uow.rollback()
                 logger.error("Error in UnitOfWorkMiddleware", exc_info=True)
                 raise

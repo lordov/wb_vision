@@ -9,13 +9,13 @@ from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.input import MessageInput
 
 from bot.handlers.states import UserPanel
-from .getters import user_panel_text
+from .getters import lk_start
 
 
 user_panel = Dialog(
     Window(
-        Format('{hello_message}'),
-        getter=user_panel_text,
+        Format('{lk_start}'),
+        getter=lk_start,
         state=UserPanel.start
     ),
 )

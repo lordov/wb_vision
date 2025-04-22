@@ -6,9 +6,6 @@ from aiogram.types import TelegramObject, User
 from fluentogram import TranslatorHub
 
 
-logger = logging.getLogger(__name__)
-
-
 class TranslatorRunnerMiddleware(BaseMiddleware):
     async def __call__(
         self,
