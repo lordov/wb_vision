@@ -20,15 +20,15 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    api_keys: Mapped[list["WbApiKey"]] = relationship(back_populates="user")
+    api_keys: Mapped[list["ApiKey"]] = relationship(back_populates="user")
     subscriptions: Mapped[list["Subscription"]
                           ] = relationship(back_populates="user")
     employees: Mapped[list["Employee"]] = relationship(back_populates="owner")
     payments: Mapped[list["Payment"]] = relationship(back_populates="user")
 
 
-class WbApiKey(Base):
-    __tablename__ = "wb_api_keys"
+class ApiKey(Base):
+    __tablename__ = "api_keys"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(

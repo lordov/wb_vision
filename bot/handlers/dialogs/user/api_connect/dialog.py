@@ -10,6 +10,7 @@ from aiogram_dialog.widgets.input import MessageInput
 
 from bot.handlers.states import ApiPanel
 from .getters import api_start, key_input
+from callback import api_key_input
 
 
 api_connect = Dialog(
@@ -35,7 +36,7 @@ api_connect = Dialog(
     Window(
         Format('{api_key_input}'),
         MessageInput(
-            func=...,
+            func=api_key_input,
             content_types=ContentType.TEXT,
         ),
         Back(

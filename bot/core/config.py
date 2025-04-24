@@ -18,8 +18,8 @@ class RedisSettings(BaseSettings):
     url: str = "redis://redis:6379/0"
 
 
-# class NatsSettings(BaseSettings):
-#     url: str = "nats://nats:4223"
+class NatsSettings(BaseSettings):
+    url: str = "nats://nats:4223"
 
 
 class BotSettings(BaseSettings):
@@ -30,6 +30,7 @@ class BotSettings(BaseSettings):
 
 class AppSettings(BaseSettings):
     fernet_secret: SecretStr
+    trial_days: int = 14  # длительность пробного периода в днях
 
     postgres: PostgresSettings
     redis: RedisSettings

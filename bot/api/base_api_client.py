@@ -11,6 +11,7 @@ from collections import deque
 from .auth.strategy import AuthStrategy
 from core.logging import api_logger
 
+
 class BaseAPIClient:
     """
     BaseAPIClient is a class for making HTTP requests with caching and error handling.
@@ -34,6 +35,7 @@ class BaseAPIClient:
 
         # Логгеры
         self.api_logger = api_logger
+
 
     def set_cache(self, cache: TTLCache) -> None:
         """
@@ -188,4 +190,3 @@ class BaseAPIClient:
                 if resp.status != 200:
                     return None
                 return await resp.read()
-

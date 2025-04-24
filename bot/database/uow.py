@@ -5,7 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repositories.base import SQLAlchemyRepository
 from .repositories.user import UserRepository
-from .models import Subscription, Payment, WbApiKey, Employee
+from .repositories.subscription import SubscriptionRepository
+from .repositories.api_key import WbApiKeyRepository
+from .models import Payment, Employee
 
 
 class UnitOfWork:
@@ -13,9 +15,8 @@ class UnitOfWork:
         self.session = session
         self.users = UserRepository(session)
         self.payments = SQLAlchemyRepository[Payment](session, Payment)
-        self.subscriptions = SQLAlchemyRepository[Subscription](
-            session, Subscription)
-        self.api_keys = SQLAlchemyRepository[WbApiKey](session, WbApiKey)
+        self.subscriptions = SubscriptionRepository(session)
+        self.api_keys = WbApiKeyRepository(session)
         self.employees = SQLAlchemyRepository[Employee](session, Employee)
 
     async def commit(self):
