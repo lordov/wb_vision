@@ -27,7 +27,7 @@ class UnitOfWorkMiddleware(BaseMiddleware):
                 return result
             except Exception as e:
                 await uow.rollback()
-                logger.error("Error in UnitOfWorkMiddleware", exc_info=True)
+                logger.error(f"UnitOfWorkMiddleware: {e}")
                 raise
             finally:
                 await uow.close()
