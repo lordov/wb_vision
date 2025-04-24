@@ -15,8 +15,9 @@ from redis.exceptions import ConnectionError
 
 from bot.core.config import settings
 # from tgbot.dialogs.admin_dialog import admin_panel
-from bot.core.logging import setup_logging, logger
+from bot.core.logging import setup_logging, app_logger
 from bot.handlers.dialogs.user.main_menu.dialog import user_panel
+from bot.handlers.dialogs.user.api_connect.dialog import api_connect
 # from tgbot.dialogs.broadcast_dialog import broadcast_dialog
 
 from bot.database.engine import async_session_maker, engine
@@ -87,7 +88,7 @@ async def setup_bot(dp: Dispatcher) -> Bot:
     )
 
     dp.include_routers(*get_routers())
-    dp.include_routers(user_panel)
+    dp.include_routers(user_panel, api_connect)
 
     setup_dialogs(dp)
 
@@ -96,7 +97,7 @@ async def setup_bot(dp: Dispatcher) -> Bot:
 
 async def main():
     setup_logging()
-    logger.info('Starting bot...', context='init')
+    app_logger.info('Starting bot...', context='init')
     # Set up the dispatcher with the chosen storage
     dp: Dispatcher = await setup_dispatcher()
 
@@ -123,10 +124,10 @@ async def main():
             ),
         )
     except Exception as e:
-        logger.error(e)
+        app_logger.error(e)
     finally:
         # await nc.close()
-        logger.info('Connection to NATS closed')
+        app_logger.info('Connection to NATS closed')
 
 
 # Запуск бота

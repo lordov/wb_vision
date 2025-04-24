@@ -4,7 +4,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
-from bot.core.logging import logger
+from bot.core.logging import db_logger
 from bot.database.uow import UnitOfWork
 
 
@@ -27,7 +27,7 @@ class UnitOfWorkMiddleware(BaseMiddleware):
                 return result
             except Exception as e:
                 await uow.rollback()
-                logger.error(f"UnitOfWorkMiddleware: {e}")
+                db_logger.error(f"UnitOfWorkMiddleware: {e}")
                 raise
             finally:
                 await uow.close()

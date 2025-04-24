@@ -3,7 +3,6 @@ from aiogram.fsm.state import State, StatesGroup
 
 class UserPanel(StatesGroup):
     start = State()
-    api_key = State()
     settings = State()
     donate = State()
     stats = State()
@@ -12,3 +11,7 @@ class UserPanel(StatesGroup):
 
 class Support(StatesGroup):
     question = State()
+
+class ApiPanel(StatesGroup):
+    start = State()
+    input = State()

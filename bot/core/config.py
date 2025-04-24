@@ -18,8 +18,8 @@ class RedisSettings(BaseSettings):
     url: str = "redis://redis:6379/0"
 
 
-class NatsSettings(BaseSettings):
-    url: str = "nats://nats:4222"
+# class NatsSettings(BaseSettings):
+#     url: str = "nats://nats:4223"
 
 
 class BotSettings(BaseSettings):
@@ -33,7 +33,7 @@ class AppSettings(BaseSettings):
 
     postgres: PostgresSettings
     redis: RedisSettings
-    nats: NatsSettings
+    # nats: NatsSettings
     bot: BotSettings
 
     class Config:

@@ -1,5 +1,3 @@
-
-from aiogram.types import User
 from aiogram.types import User
 from aiogram_dialog import DialogManager
 from fluentogram import TranslatorRunner

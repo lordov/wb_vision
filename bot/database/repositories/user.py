@@ -5,7 +5,7 @@ from .base import SQLAlchemyRepository
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
-from bot.core.logging import logger
+from bot.core.logging import db_logger
 
 
 class UserRepository(SQLAlchemyRepository[User]):
@@ -17,11 +17,11 @@ class UserRepository(SQLAlchemyRepository[User]):
             stmt = select(User).where(User.telegram_id == telegram_id)
             result = await self.session.execute(stmt)
             user = result.scalar_one_or_none()
-            logger.info("user.lookup", telegram_id=telegram_id,
+            db_logger.info("user.lookup", telegram_id=telegram_id,
                         found=bool(user))
             return user
         except SQLAlchemyError as e:
-            logger.error("user.lookup.failed",
+            db_logger.error("user.lookup.failed",
                          telegram_id=telegram_id, error=str(e))
             raise
 
@@ -33,7 +33,7 @@ class UserRepository(SQLAlchemyRepository[User]):
             if user:
                 if user.is_blocked:
                     user.is_blocked = False
-                logger.info("user.exists", telegram_id=telegram_id)
+                db_logger.info("user.exists", telegram_id=telegram_id)
                 return user
 
             user = await self.add_one({
@@ -41,10 +41,10 @@ class UserRepository(SQLAlchemyRepository[User]):
                 "username": username,
                 "locale": locale,
             })
-            logger.info("user.created", telegram_id=telegram_id,
+            db_logger.info("user.created", telegram_id=telegram_id,
                         username=username)
             return user
         except SQLAlchemyError as e:
-            logger.error("user.create.failed",
+            db_logger.error("user.create.failed",
                          telegram_id=telegram_id, error=str(e))
             raise
