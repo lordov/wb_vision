@@ -1,5 +1,6 @@
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..models import ApiKey
 from .base import SQLAlchemyRepository
@@ -54,3 +55,42 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
         key_model = ApiKey(**data)
         self.session.add(key_model)
         return key_model
+
+    async def upsert_key(
+        self,
+        user_id: int,
+        title: str,
+        encrypted_key: str,
+        is_active: bool,
+    ) -> None:
+        """Upsert (insert or update) an API key.
+
+        Args:
+            user_id (int): ID of the user to whom the API key belongs.
+            title (str): Title of the API key.
+            encrypted_key (str): Encrypted API key.
+            is_active (bool): Whether the API key is active.
+
+        Returns:
+            None
+        """
+        try:
+            stmt = select(ApiKey).where(
+                ApiKey.user_id == user_id,
+                ApiKey.title == title,
+            )
+            result = await self.session.execute(stmt)
+            existing = result.scalar_one_or_none()
+
+            if existing:
+                existing.key_encrypted = encrypted_key
+                existing.is_active = is_active
+            else:
+                self.session.add(ApiKey(
+                    user_id=user_id,
+                    title=title,
+                    key_encrypted=encrypted_key,
+                    is_active=is_active,
+                ))
+        except SQLAlchemyError as e:
+            raise e

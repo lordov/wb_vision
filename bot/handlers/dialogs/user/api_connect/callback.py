@@ -1,15 +1,15 @@
 from aiogram_dialog import DialogManager, ShowMode
-from aiogram_dialog.widgets.input import MessageInput
 from aiogram.types import Message
 from aiogram_dialog.widgets.kbd import Button
 
 from fluentogram import TranslatorRunner
-from cryptography.fernet import Fernet
 
 from bot.database.uow import UnitOfWork
 from bot.services.api_key import ApiKeyService
 from bot.services.subscription import SubscriptionService
 from bot.core.logging import app_logger
+from bot.core.security import fernet
+from bot.handlers.states import ApiPanel
 
 
 async def api_key_input(
@@ -19,38 +19,43 @@ async def api_key_input(
 ):
     uow: UnitOfWork = dialog_manager.middleware_data["uow"]
     i18n: TranslatorRunner = dialog_manager.middleware_data["i18n"]
-    fernet: Fernet = dialog_manager.middleware_data["fernet"]
     user = message.from_user
     raw_key = message.text.strip()
+    # Работа с API ключами
+    subscription_service = SubscriptionService(uow)
+    api_key_service = ApiKeyService(uow, fernet=fernet)
 
     try:
-        # Валидация ключа
-        if not validate_wb_api_key_format(raw_key):
+        if not await api_key_service.validate_wb_api_key(raw_key):
             await message.answer(i18n.get("api-key-invalid"))
             return
 
-        # Проверка доступности пробного периода
-        subscription_service = SubscriptionService(uow)
-        can_use_trial = await subscription_service.check_trial(user.id)
-
-        if not can_use_trial:
-            await message.answer(i18n.get("api-key-trial-expired"))
+        if not await api_key_service.check_request_to_wb(raw_key):
+            await message.answer(i18n.get("api-key-invalid-request"))
             return
 
-        # Работа с API ключами
-        api_key_service = ApiKeyService(repo=uow.api_keys, fernet=fernet)
-        await api_key_service.set_key(user.id, "wb_stats", raw_key)
+        status = await api_key_service.set_api_key_with_subscription_check(
+            telegram_id=user.id,
+            title="wb_stats",
+            raw_key=raw_key,
+            subscription_service=subscription_service,
+        )
+
         await uow.commit()
 
-        app_logger.info("API Key added", user_id=user.id)
-        await message.answer(i18n.get("api-key-success"))
-        await dialog_manager.done()
+        if status == "active":
+            await message.answer(i18n.get("api-key-success"))
+            await dialog_manager.switch_to(ApiPanel.start)
+        elif status == "trial_activated":
+            await message.answer(i18n.get("subscribe-trial-activeated"))
+            await dialog_manager.switch_to(ApiPanel.start)
+        else:
+            await message.answer(
+                i18n.get("subscribe-to-activate-key")
+            )
+            await dialog_manager.switch_to(ApiPanel.start)
 
     except Exception as e:
         app_logger.exception("API Key save failed",
                              error=str(e), user_id=user.id)
-        await message.answer(i18n.get("unexpected-error"))
-
-
-def validate_wb_api_key_format(key: str) -> bool:
-    return len(key) > 30
+        await message.answer('Непредвиденная ошибка')

@@ -14,9 +14,7 @@ class SubscriptionRepository(SQLAlchemyRepository[Subscription]):
         """Получаем активную подписку для пользователя."""
         stmt = select(Subscription).where(
             Subscription.user_id == user_id,
-            Subscription.expires_at > datetime.now(),
-            # Предполагаем, что в планах 'trial' можно будет обрабатывать отдельно
-            Subscription.plan != "trial"
+            Subscription.is_active,
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -30,9 +28,18 @@ class SubscriptionRepository(SQLAlchemyRepository[Subscription]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def create_subscription(self, user_id: int, plan: str, expires_at: datetime) -> Subscription:
+    async def create_subscription(
+            self, 
+            user_id: int, 
+            plan: str,
+            expires_at: datetime,
+            is_active: bool = True,
+            ) -> Subscription:
         """Создаем новую подписку."""
         subscription = Subscription(
-            user_id=user_id, plan=plan, expires_at=expires_at)
+            user_id=user_id, plan=plan, 
+            expires_at=expires_at,
+            is_active=is_active
+            )
         self.session.add(subscription)
         return subscription

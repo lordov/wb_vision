@@ -48,6 +48,7 @@ class Subscription(Base):
         Integer, ForeignKey("users.id", name='fk_user_id'), index=True)
     # trial, monthly, quarterly, yearly
     plan: Mapped[str] = mapped_column(String(50))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     started_at: Mapped[datetime] = mapped_column(
         DateTime(), default=datetime.now(), index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime())

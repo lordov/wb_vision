@@ -34,7 +34,7 @@ class AppSettings(BaseSettings):
 
     postgres: PostgresSettings
     redis: RedisSettings
-    # nats: NatsSettings
+    nats: NatsSettings
     bot: BotSettings
 
     class Config:

@@ -5,12 +5,12 @@ from aiogram_dialog.widgets.kbd import (
     Row,  Column,  Group, Back, Next,
     Cancel, Button, SwitchTo, Start,
 )
-from aiogram_dialog.widgets.text import Const, Format
+from aiogram_dialog.widgets.text import Format
 from aiogram_dialog.widgets.input import MessageInput
 
 from bot.handlers.states import ApiPanel
 from .getters import api_start, key_input
-from callback import api_key_input
+from .callback import api_key_input
 
 
 api_connect = Dialog(
