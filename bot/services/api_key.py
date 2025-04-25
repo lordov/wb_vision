@@ -17,13 +17,13 @@ class ApiKeyService:
         self.user_repo = uow.users
         self.fernet = fernet
 
-    async def get_user_key_titles(self, telegram_id: int) -> list[dict]:
+    async def get_user_key(self, telegram_id: int, title: str) -> ApiKey | None:
         user = await self.user_repo.get_by_telegram_id(telegram_id)
         if not user:
             raise ValueError("User not found")
-        app_logger.info("Fetching API key titles", user_id=user.id)
-        keys = await self.repo.get_active(user.id)
-        return [{"id": key.id, "title": key.title} for key in keys]
+        app_logger.info("Fetching API key titles", user_id=user.id, title=title)
+        key = await self.repo.get_active_by_user(user.id, title=title)
+        return key
 
     async def add_encrypt_key(self, telegram_id: int, raw_key: str, title: str = "API Key") -> ApiKey:
         user = await self.user_repo.get_by_telegram_id(telegram_id)

@@ -21,6 +21,13 @@ api_connect = Dialog(
                 Next(
                     Format('{api_key_btn}'),
                     id='next',
+                    when='active'
+                ),
+                Button(
+                    Format('{api_key_btn}'),
+                    id='delete_key',
+                    on_click=...,
+                    when='inactive'
                 )
             ),
             Column(

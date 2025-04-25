@@ -15,3 +15,4 @@ class Support(StatesGroup):
 class ApiPanel(StatesGroup):
     start = State()
     input = State()
+    deactivate = State()

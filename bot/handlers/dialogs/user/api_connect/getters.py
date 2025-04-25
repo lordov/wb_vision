@@ -1,6 +1,9 @@
 from aiogram.types import User
 from aiogram_dialog import DialogManager
 from fluentogram import TranslatorRunner
+from bot.database.uow import UnitOfWork
+from bot.services.api_key import ApiKeyService
+from bot.core.security import fernet
 
 
 async def api_start(
@@ -9,10 +12,19 @@ async def api_start(
     event_from_user: User,
     **kwargs
 ) -> dict:
+    uow: UnitOfWork = dialog_manager.middleware_data.get('uow')
+    api_key_service = ApiKeyService(uow, fernet=fernet)
+    key = await api_key_service.get_user_key(event_from_user.id, "wb_stats")
+
+    has_key = key is not None
+    status = "delete" if has_key else "set"
+
     return {
-        'api_key_text': i18n.get('api-key-text'),
-        'api_key_btn': i18n.get('api-key-btn'),
-        'back': i18n.get('back-btn')
+        'api_key_text': i18n.get('api-key-text', has_key=str(has_key).lower()),
+        'api_key_btn': i18n.get('api-key-btn', status=status),
+        'back': i18n.get('back-btn'),
+        'active': not has_key,
+        'inactive': has_key,
     }
 
 async def key_input(

@@ -1,5 +1,5 @@
 from aiogram_dialog import DialogManager, ShowMode
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from aiogram_dialog.widgets.kbd import Button
 
 from fluentogram import TranslatorRunner
