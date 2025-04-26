@@ -45,6 +45,11 @@ class WBAPIClient(BaseAPIClient):
         url = f"https://statistics-api.wildberries.ru/api/v1/supplier/orders?dateFrom={
             date_from}"
         return await self._request("GET", url)
+    
+    async def ping_wb(self):
+        url = "https://statistics-api.wildberries.ru/ping"
+        response = await self._request("GET", url)
+        return response
 
 
 if __name__ == "__main__":

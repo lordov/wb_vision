@@ -1,5 +1,7 @@
 from cryptography.fernet import Fernet, InvalidToken
 
+from bot.api.auth.strategy import APIKeyAuthStrategy
+from bot.api.wb import WBAPIClient
 from bot.database.repositories.api_key import WbApiKeyRepository
 from bot.database.models import ApiKey
 from bot.database.uow import UnitOfWork
@@ -74,8 +76,19 @@ class ApiKeyService:
     async def validate_wb_api_key(self, key: str) -> bool:
         return len(key) > 30
 
-    async def check_request_to_wb(self, key: str) -> bool:
-        return True
+    async def check_request_to_wb(self, raw_key: str) -> bool:
+        """Проверяет валидность ключа через метод ping Wildberries."""
+        auth_strategy = APIKeyAuthStrategy(api_key=raw_key)  # Какой у тебя класс стратегии
+        client = WBAPIClient(auth_strategy=auth_strategy)
+
+        try:
+            response = await client.ping_wb()
+            if response['Status'] == 'OK':
+                return True
+            return False
+        except Exception as e:
+            # Логировать можно здесь, если хочешь
+            return False
 
     async def set_api_key_with_subscription_check(
         self,

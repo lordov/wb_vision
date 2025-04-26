@@ -1,7 +1,6 @@
 import json
 import time
 import aiohttp
-import logging
 import asyncio
 import inspect
 
@@ -9,7 +8,7 @@ from typing import Optional, Any
 from cachetools import TTLCache
 from collections import deque
 from .auth.strategy import AuthStrategy
-from core.logging import api_logger
+from ..core.logging import api_logger
 
 
 class BaseAPIClient:
