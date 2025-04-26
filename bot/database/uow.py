@@ -2,22 +2,25 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
+from .repositories.wb_repo import WBRepository
 from .repositories.base import SQLAlchemyRepository
 from .repositories.user import UserRepository
 from .repositories.subscription import SubscriptionRepository
 from .repositories.api_key import WbApiKeyRepository
-from .models import Payment, Employee
+from .models import OrdersWB, Payment, Employee
 
 
 class UnitOfWork:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.users = UserRepository(session)
-        self.payments = SQLAlchemyRepository[Payment](session, Payment)
-        self.subscriptions = SubscriptionRepository(session)
         self.api_keys = WbApiKeyRepository(session)
+        self.subscriptions = SubscriptionRepository(session)
+        self.wb_orders = WBRepository(session, OrdersWB)
+        
+        self.payments = SQLAlchemyRepository[Payment](session, Payment)
         self.employees = SQLAlchemyRepository[Employee](session, Employee)
+        
 
     async def commit(self):
         await self.session.commit()
