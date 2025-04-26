@@ -3,7 +3,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-from bot.schemas.wb import OrderWBCreate
+from bot.schemas.wb import OrderWBCreate, SalesWBCreate
 from ..models import OrdersWB
 from ..repositories.base import SQLAlchemyRepository
 from .base import T
@@ -15,6 +15,20 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
 
     async def add_orders_bulk(self, orders: list[OrderWBCreate]) -> None:
         """Добавить заказы пачкой"""
+        if not orders:
+            return
+
+        data = [order.model_dump(by_alias=True) for order in orders]
+
+        stmt = insert(OrdersWB).values(data)
+        stmt = stmt.on_conflict_do_nothing(
+            index_elements=['date', 'user_id',
+                            'srid', 'supplierArticle', 'isCancel']
+        )
+        await self.session.execute(stmt)
+
+    async def add_orders_bulk(self, orders: list[SalesWBCreate]) -> None:
+        """Добавить продажи пачкой"""
         if not orders:
             return
 

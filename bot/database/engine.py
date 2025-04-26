@@ -1,17 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy import DateTime
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
-from datetime import datetime
-
 from bot.core.config import settings
-
-
-class Base(DeclarativeBase):
-    created: Mapped[DateTime] = mapped_column(
-        DateTime(), default=datetime.now)
-    updated: Mapped[DateTime] = mapped_column(
-        DateTime(), default=datetime.now, onupdate=datetime.now)
+from .base import Base
 
 
 engine = create_async_engine(settings.postgres.async_url, echo=True)

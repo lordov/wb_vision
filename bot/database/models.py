@@ -108,50 +108,39 @@ class OrdersWB(Base):
         Integer, primary_key=True, autoincrement=True)
     date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     last_change_date: Mapped[datetime] = mapped_column(
-        "lastChangeDate", DateTime, nullable=False)
-    supplier_article: Mapped[str] = mapped_column(
-        "supplierArticle", String(75), nullable=False)
-    tech_size: Mapped[str] = mapped_column(
-        "techSize", String(50), nullable=False)
+        DateTime, nullable=False)
+    supplier_article: Mapped[str] = mapped_column(String(75), nullable=False)
+    tech_size: Mapped[str] = mapped_column(String(50), nullable=False)
     barcode: Mapped[str] = mapped_column(String(255), nullable=False)
     total_price: Mapped[Decimal] = mapped_column(
-        "totalPrice", Numeric(15, 2), nullable=False)
+        Numeric(15, 2), nullable=False)
     finished_price: Mapped[Decimal] = mapped_column(
-        "finishedPrice", Numeric(15, 2), nullable=True)
+        Numeric(15, 2), nullable=True)
     discount_percent: Mapped[Decimal] = mapped_column(
-        "discountPercent", Numeric(5, 2), nullable=False)
+        Numeric(5, 2), nullable=False)
     spp: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=True)
-    warehouse_name: Mapped[str] = mapped_column(
-        "warehouseName", String(50), nullable=False)
-    region_name: Mapped[str] = mapped_column(
-        "regionName", String(200), nullable=False)
-    oblast_okrug_name: Mapped[str] = mapped_column(
-        "oblastOkrugName", String(200), nullable=True)
-    country_name: Mapped[str] = mapped_column(
-        "countryName", String(200), nullable=True)
-    income_id: Mapped[int] = mapped_column(
-        "incomeID", BigInteger, nullable=True)
-    nm_id: Mapped[int] = mapped_column(
-        "nmId", BigInteger, nullable=False, index=True)
+    warehouse_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    region_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    oblast_okrug_name: Mapped[str] = mapped_column(String(200), nullable=True)
+    country_name: Mapped[str] = mapped_column(String(200), nullable=True)
+    income_id: Mapped[int] = mapped_column(BigInteger, nullable=True)
+    nm_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
     subject: Mapped[str] = mapped_column(String(50), nullable=False)
     category: Mapped[str] = mapped_column(String(50), nullable=False)
     brand: Mapped[str] = mapped_column(String(50), nullable=False)
-    is_cancel: Mapped[bool] = mapped_column(
-        "isCancel", Boolean, nullable=False)
-    cancel_date: Mapped[datetime] = mapped_column(
-        "cancelDate", DateTime, nullable=True)
-    g_number: Mapped[str] = mapped_column(
-        "gNumber", String(60), nullable=False)
+    is_cancel: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    cancel_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    g_number: Mapped[str] = mapped_column(String(60), nullable=False)
     sticker: Mapped[str] = mapped_column(String(255), nullable=False)
     srid: Mapped[str] = mapped_column(String(255), nullable=True)
     price_with_disc: Mapped[Decimal] = mapped_column(
-        "priceWithDisc", Numeric(15, 2), nullable=True)
+        Numeric(15, 2), nullable=True)
     is_supply: Mapped[bool] = mapped_column(
-        "isSupply", Boolean, nullable=True, comment="Договор поставки")
+        Boolean, nullable=True, comment="Договор поставки")
     is_realization: Mapped[bool] = mapped_column(
-        "isRealization", Boolean, nullable=True, comment="Договор реализации")
+        Boolean, nullable=True, comment="Договор реализации")
     warehouse_type: Mapped[str] = mapped_column(
-        "warehouseType", String(60), nullable=True, comment="Тип склада")
+        String(60), nullable=True, comment="Тип склада")
 
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -163,6 +152,55 @@ class OrdersWB(Base):
 
     __table_args__ = (UniqueConstraint(
         'date', 'user_id', 'srid', 'supplierArticle', 'isCancel', name='unique_order'), )
+
+
+class SalesWB(Base):
+    __tablename__ = 'wb_sales'
+
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True)
+    date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    last_change_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    warehouse_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    country_name: Mapped[str] = mapped_column(String(255), nullable=True)
+    oblast_okrug_name: Mapped[str] = mapped_column(String(255), nullable=True)
+    region_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    supplier_article: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True)
+    nm_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True,)
+    barcode: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[str] = mapped_column(String(255), nullable=False)
+    subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    brand: Mapped[str] = mapped_column(String(255), nullable=False)
+    tech_size: Mapped[str] = mapped_column(String(50), nullable=False)
+    income_id: Mapped[int] = mapped_column(BigInteger, nullable=True)
+    is_supply: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    is_realization: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    total_price: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    discount_percent: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False)
+    spp: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=True)
+    for_pay: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    finished_price: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=True)
+    price_with_disc: Mapped[Decimal] = mapped_column(
+        Numeric(15, 2), nullable=False)
+    payment_sale_amount: Mapped[Decimal] = mapped_column(
+        Numeric(15, 2), nullable=True
+    )
+    sale_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    sticker: Mapped[str] = mapped_column(String(255), nullable=False)
+    g_number: Mapped[str] = mapped_column(String(255), nullable=False)
+    srid: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
+    warehouse_type: Mapped[str] = mapped_column(String(255), nullable=True)
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    __table_args__ = (UniqueConstraint(
+        'date', 'user_id', 'srid', 'supplierArticle', 'isCancel', name='unique_sale'), )
 
 
 if __name__ == '__main__':

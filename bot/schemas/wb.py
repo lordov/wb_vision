@@ -50,3 +50,38 @@ class OrderWBCreate(BaseModel):
         populate_by_name = True
         allow_population_by_field_name = True
 
+class SalesWBCreate(BaseModel):
+    date: datetime
+    last_change_date: datetime = Field(..., alias="lastChangeDate")
+    warehouse_name: str = Field(..., alias="warehouseName")
+    country_name: Optional[str] = Field(None, alias="countryName")
+    oblast_okrug_name: Optional[str] = Field(None, alias="oblastOkrugName")
+    region_name: str = Field(..., alias="regionName")
+    supplier_article: str = Field(..., alias="supplierArticle")
+    nm_id: int = Field(..., alias="nmId")
+    barcode: str
+    category: str
+    subject: str
+    brand: str
+    tech_size: str = Field(..., alias="techSize")
+    income_id: Optional[int] = Field(None, alias="incomeID")
+    is_supply: Optional[bool] = Field(None, alias="isSupply")
+    is_realization: Optional[bool] = Field(None, alias="isRealization")
+    total_price: Decimal = Field(..., alias="totalPrice")
+    discount_percent: Decimal = Field(..., alias="discountPercent")
+    spp: Optional[Decimal] = None
+    for_pay: Decimal = Field(..., alias="forPay")
+    finished_price: Optional[Decimal] = Field(None, alias="finishedPrice")
+    price_with_disc: Decimal = Field(..., alias="priceWithDisc")
+    payment_sale_amount: Optional[Decimal] = Field(None, alias="paymentSaleAmount")
+    sale_id: str = Field(..., alias="saleID")
+    sticker: str
+    g_number: str = Field(..., alias="gNumber")
+    is_cancel: bool = Field(..., alias="isCancel")
+    srid: Optional[str] = None
+    warehouse_type: Optional[str] = Field(None, alias="warehouseType")
+
+    class Config:
+        populate_by_name = True
+        allow_population_by_field_name = True
+
