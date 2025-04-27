@@ -106,9 +106,9 @@ class OrdersWB(Base):
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
-    date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    date: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     last_change_date: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False)
+        DateTime, nullable=False, index=True)
     supplier_article: Mapped[str] = mapped_column(String(75), nullable=False)
     tech_size: Mapped[str] = mapped_column(String(50), nullable=False)
     barcode: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -151,7 +151,8 @@ class OrdersWB(Base):
     user: Mapped["User"] = relationship(back_populates="orders")
 
     __table_args__ = (UniqueConstraint(
-        'date', 'user_id', 'srid', 'supplierArticle', 'isCancel', name='unique_order'), )
+        'date', 'user_id', 'srid', 'nm_id', 'is_cancel', 'tech_size', 
+        name='unique_order'),)
 
 
 class SalesWB(Base):
@@ -159,9 +160,9 @@ class SalesWB(Base):
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
-    date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    date: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     last_change_date: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False)
+        DateTime, nullable=False, index=True)
     warehouse_name: Mapped[str] = mapped_column(String(255), nullable=False)
     country_name: Mapped[str] = mapped_column(String(255), nullable=True)
     oblast_okrug_name: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -203,17 +204,18 @@ class SalesWB(Base):
     )
 
     __table_args__ = (UniqueConstraint(
-        'date', 'user_id', 'srid', 'supplierArticle', 'isCancel', name='unique_sale'), )
+        'date', 'user_id', 'srid', 'nm_id', 'tech_size',
+        name='unique_sale'),)
 
 
 class StocksWB(Base):
-    __tablename__ = 'wb_stocks_days'
+    __tablename__ = 'wb_stocks'
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
     import_date: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, index=True)
-    last_сhange_date: Mapped[datetime] = mapped_column(DateTime)
+    last_сhange_date: Mapped[datetime] = mapped_column(DateTime, index=True)
     supplier_article: Mapped[str] = mapped_column(
         String(75), nullable=False, index=True)
     tech_size: Mapped[str] = mapped_column(String(30), nullable=True)
@@ -224,8 +226,8 @@ class StocksWB(Base):
     brand: Mapped[str] = mapped_column(String(50))
     quantity: Mapped[int] = mapped_column(Integer)
     quantity_full: Mapped[int] = mapped_column(Integer)
-    is_supply: Mapped[bool] = mapped_column(Boolean)
-    is_realization: Mapped[bool] = mapped_column(Boolean)
+    is_supply: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    is_realization: Mapped[bool] = mapped_column(Boolean, nullable=True)
     in_way_to_client: Mapped[int] = mapped_column(Integer)
     in_way_from_client: Mapped[int] = mapped_column(Integer)
     warehouse_name: Mapped[str] = mapped_column(String(50))
@@ -240,7 +242,8 @@ class StocksWB(Base):
     )
 
     __table_args__ = (UniqueConstraint(
-        'date', 'user_id', 'srid', 'supplierArticle', 'isCancel', name='unique_sale'), )
+        'import_date', 'user_id', 'warehouse_name', 'nm_id',
+        name='unique_stocks'),)
 
 
 if __name__ == '__main__':

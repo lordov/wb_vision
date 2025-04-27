@@ -94,13 +94,13 @@ class StocksWBCreate(BaseModel):
     subject: str
     brand: str
     quantity: int
-    is_supply: bool = Field(..., alias="isSupply")
-    is_realization: bool = Field(..., alias="isRealization")
-    in_way_to_client: int = Field(..., alias="inWayToClient")
-    in_way_from_client: int = Field(..., alias="inWayFromClient")
-    quantity_full: int = Field(..., alias="quantityFull")
+    is_supply: Optional[bool] = Field(None, alias="isSupply")
+    is_realization: Optional[bool] = Field(None, alias="isRealization")
+    in_way_to_client: Optional[int] = Field(..., alias="inWayToClient")
+    in_way_from_client: Optional[int] = Field(..., alias="inWayFromClient")
+    quantity_full:int = Field(..., alias="quantityFull")
     warehouse_name: str = Field(..., alias="warehouseName")
-    sc_code: str = Field(..., alias="SCCode")
+    sc_code: Optional[str] = Field(None, alias="SCCode")
     price: Decimal
     discount: Decimal
 

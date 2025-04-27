@@ -17,13 +17,9 @@ class WBAPIClient(BaseAPIClient):
         :param date_from: Дата начала периода в формате YYYY-MM-DD (опционально).
         :return: JSON с данными о продажах или None в случае ошибки.
         """
-        # Получение последней даты из базы данных
-        # date_from_db = await db_manager.get_last_date(table_name='wb_sales', date_column='date')
-        if date_from_db is None:
-            date_from_db = date_from
 
         url = f"https://statistics-api.wildberries.ru/api/v1/supplier/sales?dateFrom={
-            date_from_db}"
+            date_from}"
         return await self._request("GET", url)
 
     # Заказы
@@ -38,10 +34,6 @@ class WBAPIClient(BaseAPIClient):
         :param db_manager: Объект DatabaseManager для взаимодействия с базой данных.
         :return: JSON с данными о заказах или None в случае ошибки.
         """
-        date_from_db = None
-        # date_from_db = await db_manager.get_last_date(table_name='wb_orders', date_column='date')
-        if date_from_db is None:
-            date_from_db = date_from
         url = f"https://statistics-api.wildberries.ru/api/v1/supplier/orders?dateFrom={
             date_from}"
         return await self._request("GET", url)

@@ -2,7 +2,6 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from bot.api.auth.strategy import APIKeyAuthStrategy
 from bot.api.wb import WBAPIClient
-from bot.database.repositories.api_key import WbApiKeyRepository
 from bot.database.models import ApiKey
 from bot.database.uow import UnitOfWork
 from bot.services.subscription import SubscriptionService
@@ -23,9 +22,52 @@ class ApiKeyService:
         user = await self.user_repo.get_by_telegram_id(telegram_id)
         if not user:
             raise ValueError("User not found")
-        app_logger.info("Fetching API key titles", user_id=user.id, title=title)
+        app_logger.info("Fetching API key titles",
+                        user_id=user.id, title=title)
         key = await self.repo.get_active_by_user(user.id, title=title)
         return key
+
+    async def get_decrypted_by_title(self, telegram_id: int, title: str) -> str | None:
+        user = await self.user_repo.get_by_telegram_id(telegram_id)
+        if not user:
+            raise ValueError("User not found")
+
+        app_logger.info("Getting and decrypting API key by title",
+                        user_id=user.id, title=title)
+        key = await self.repo.get_by_title(user.id, title)
+        if not key:
+            app_logger.info("API key not found", user_id=user.id, title=title)
+            return None
+        return await self.decrypt_key(key.key_encrypted)
+
+    async def get_all_decrypted_keys(self) -> list[ApiKey]:
+        app_logger.info("Getting all decrypted API keys")
+
+        # Получаем все ключи из репозитория
+        keys = await self.repo.get_all()
+
+        decrypted_keys = []
+
+        for key in keys:
+            try:
+                # Расшифровка ключа
+                decrypted_key = await self.decrypt_key(key.key_encrypted)
+
+                decrypted_keys.append(
+                    ApiKey(
+                        id=key.id,
+                        user_id=key.user_id,
+                        title=key.title,
+                        key_encrypted=decrypted_key,
+                        is_active=key.is_active,
+                    )
+                )
+            except ApiKeyDecryptionError as e:
+                app_logger.warning(
+                    f"Failed to decrypt API key with id {key.id}: {e}")
+                continue  # Если не удалось расшифровать, пропускаем этот ключ
+
+        return decrypted_keys
 
     async def add_encrypt_key(self, telegram_id: int, raw_key: str, title: str = "API Key") -> ApiKey:
         user = await self.user_repo.get_by_telegram_id(telegram_id)
@@ -50,19 +92,6 @@ class ApiKeyService:
             app_logger.warning("Failed to decrypt API key: invalid token")
             raise ApiKeyDecryptionError("Invalid or corrupted key")
 
-    async def get_decrypted_by_title(self, telegram_id: int, title: str) -> str | None:
-        user = await self.user_repo.get_by_telegram_id(telegram_id)
-        if not user:
-            raise ValueError("User not found")
-
-        app_logger.info("Getting and decrypting API key by title",
-                        user_id=user.id, title=title)
-        key = await self.repo.get_by_title(user.id, title)
-        if not key:
-            app_logger.info("API key not found", user_id=user.id, title=title)
-            return None
-        return await self.decrypt_key(key.key_encrypted)
-
     async def set_key(self, user_id: int, title: str, raw_key: str, is_active: bool = True) -> None:
         encrypted = self.fernet.encrypt(raw_key.encode()).decode()
         await self.repo.upsert_key(user_id, title, encrypted, is_active=is_active)
@@ -78,7 +107,8 @@ class ApiKeyService:
 
     async def check_request_to_wb(self, raw_key: str) -> bool:
         """Проверяет валидность ключа через метод ping Wildberries."""
-        auth_strategy = APIKeyAuthStrategy(api_key=raw_key)  # Какой у тебя класс стратегии
+        auth_strategy = APIKeyAuthStrategy(
+            api_key=raw_key)  # Какой у тебя класс стратегии
         client = WBAPIClient(auth_strategy=auth_strategy)
 
         try:

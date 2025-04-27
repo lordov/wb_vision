@@ -1,5 +1,4 @@
 import asyncio
-import logging
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -14,6 +13,8 @@ from redis.asyncio.client import Redis
 from redis.exceptions import ConnectionError
 
 from bot.core.config import settings
+from bot.core.security import fernet
+from bot.dependency.container import DependencyContainer
 # from tgbot.dialogs.admin_dialog import admin_panel
 from bot.core.logging import setup_logging, app_logger
 from bot.handlers.dialogs.user.main_menu.dialog import user_panel
@@ -32,7 +33,7 @@ from bot.utils.start_consumer import start_broadcast_consumer
 from bot.handlers import get_routers
 
 
-async def setup_dispatcher() -> Dispatcher:
+async def setup_dispatcher(container: DependencyContainer) -> Dispatcher:
     """
     Function to set up the dispatcher (Dispatcher).
 
@@ -61,7 +62,7 @@ async def setup_dispatcher() -> Dispatcher:
         storage = MemoryStorage()
 
     # Create a dispatcher with the chosen storage
-    dp = Dispatcher(db_engine=engine, storage=storage)
+    dp = Dispatcher(db_engine=engine, storage=storage, container=container)
     dp.update.outer_middleware(UnitOfWorkMiddleware(
         session_pool=async_session_maker))
     dp.update.middleware(TranslatorRunnerMiddleware())
@@ -98,12 +99,20 @@ async def setup_bot(dp: Dispatcher) -> Bot:
 async def main():
     setup_logging()
     app_logger.info('Starting bot...', context='init')
+    translator_hub: TranslatorHub = create_translator_hub()
+
+    container = DependencyContainer(
+        bot_token=settings.bot.token.get_secret_value(),
+        i18n=translator_hub,
+        fernet=fernet,
+        session_maker=async_session_maker
+        )
     # Set up the dispatcher with the chosen storage
-    dp: Dispatcher = await setup_dispatcher()
+    dp: Dispatcher = await setup_dispatcher(container)
 
     # Set up the bot with the provided token and default properties
     bot: Bot = await setup_bot(dp)
-
+    
     # Подключаемся к Nats и получаем ссылки на клиент и JetStream-контекст
 
     # nc, js = await connect_to_nats(servers=settings.nats_url)
@@ -112,8 +121,7 @@ async def main():
         await bot.send_message(settings.bot.admin_id, f'Бот запущен.')
     except Exception as e:
         print(e)
-    translator_hub: TranslatorHub = create_translator_hub()
-
+    
     await bot.delete_webhook(drop_pending_updates=True)
     try:
         await asyncio.gather(
