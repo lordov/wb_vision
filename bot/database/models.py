@@ -160,7 +160,8 @@ class SalesWB(Base):
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
     date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    last_change_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    last_change_date: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False)
     warehouse_name: Mapped[str] = mapped_column(String(255), nullable=False)
     country_name: Mapped[str] = mapped_column(String(255), nullable=True)
     oblast_okrug_name: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -176,12 +177,14 @@ class SalesWB(Base):
     income_id: Mapped[int] = mapped_column(BigInteger, nullable=True)
     is_supply: Mapped[bool] = mapped_column(Boolean, nullable=False)
     is_realization: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    total_price: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    total_price: Mapped[Decimal] = mapped_column(
+        Numeric(15, 2), nullable=False)
     discount_percent: Mapped[Decimal] = mapped_column(
         Numeric(5, 2), nullable=False)
     spp: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=True)
     for_pay: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
-    finished_price: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=True)
+    finished_price: Mapped[Decimal] = mapped_column(
+        Numeric(15, 2), nullable=True)
     price_with_disc: Mapped[Decimal] = mapped_column(
         Numeric(15, 2), nullable=False)
     payment_sale_amount: Mapped[Decimal] = mapped_column(
@@ -192,6 +195,43 @@ class SalesWB(Base):
     g_number: Mapped[str] = mapped_column(String(255), nullable=False)
     srid: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
     warehouse_type: Mapped[str] = mapped_column(String(255), nullable=True)
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    __table_args__ = (UniqueConstraint(
+        'date', 'user_id', 'srid', 'supplierArticle', 'isCancel', name='unique_sale'), )
+
+
+class StocksWB(Base):
+    __tablename__ = 'wb_stocks_days'
+
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True)
+    import_date: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, index=True)
+    last_сhange_date: Mapped[datetime] = mapped_column(DateTime)
+    supplier_article: Mapped[str] = mapped_column(
+        String(75), nullable=False, index=True)
+    tech_size: Mapped[str] = mapped_column(String(30), nullable=True)
+    barcode: Mapped[str] = mapped_column(String(30))
+    nm_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    category: Mapped[str] = mapped_column(String(50))
+    subject: Mapped[str] = mapped_column(String(50))
+    brand: Mapped[str] = mapped_column(String(50))
+    quantity: Mapped[int] = mapped_column(Integer)
+    quantity_full: Mapped[int] = mapped_column(Integer)
+    is_supply: Mapped[bool] = mapped_column(Boolean)
+    is_realization: Mapped[bool] = mapped_column(Boolean)
+    in_way_to_client: Mapped[int] = mapped_column(Integer)
+    in_way_from_client: Mapped[int] = mapped_column(Integer)
+    warehouse_name: Mapped[str] = mapped_column(String(50))
+    sc_code: Mapped[str] = mapped_column(String(50), nullable=True)
+    price: Mapped[Decimal] = mapped_column(Numeric(15, 2))
+    discount: Mapped[Decimal] = mapped_column(Numeric(5, 2))
 
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),

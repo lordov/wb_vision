@@ -2,13 +2,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, field_validator, validator
+from pydantic import BaseModel, Field, field_validator
 
-from datetime import datetime
-from decimal import Decimal
-from typing import Optional
-
-from pydantic import BaseModel, Field, validator
 
 class OrderWBCreate(BaseModel):
     date: datetime
@@ -50,6 +45,7 @@ class OrderWBCreate(BaseModel):
         populate_by_name = True
         allow_population_by_field_name = True
 
+
 class SalesWBCreate(BaseModel):
     date: datetime
     last_change_date: datetime = Field(..., alias="lastChangeDate")
@@ -73,7 +69,8 @@ class SalesWBCreate(BaseModel):
     for_pay: Decimal = Field(..., alias="forPay")
     finished_price: Optional[Decimal] = Field(None, alias="finishedPrice")
     price_with_disc: Decimal = Field(..., alias="priceWithDisc")
-    payment_sale_amount: Optional[Decimal] = Field(None, alias="paymentSaleAmount")
+    payment_sale_amount: Optional[Decimal] = Field(
+        None, alias="paymentSaleAmount")
     sale_id: str = Field(..., alias="saleID")
     sticker: str
     g_number: str = Field(..., alias="gNumber")
@@ -85,3 +82,28 @@ class SalesWBCreate(BaseModel):
         populate_by_name = True
         allow_population_by_field_name = True
 
+
+class StocksWBCreate(BaseModel):
+    import_date: datetime = Field(..., alias="importDate")
+    last_change_date: datetime = Field(..., alias="lastChangeDate")
+    supplier_article: str = Field(..., alias="supplierArticle")
+    tech_size: str = Field(..., alias="techSize")
+    barcode: str
+    nm_id: int = Field(..., alias="nmId")
+    category: str
+    subject: str
+    brand: str
+    quantity: int
+    is_supply: bool = Field(..., alias="isSupply")
+    is_realization: bool = Field(..., alias="isRealization")
+    in_way_to_client: int = Field(..., alias="inWayToClient")
+    in_way_from_client: int = Field(..., alias="inWayFromClient")
+    quantity_full: int = Field(..., alias="quantityFull")
+    warehouse_name: str = Field(..., alias="warehouseName")
+    sc_code: str = Field(..., alias="SCCode")
+    price: Decimal
+    discount: Decimal
+
+    class Config:
+        populate_by_name = True
+        allow_population_by_field_name = True
