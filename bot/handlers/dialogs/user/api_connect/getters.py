@@ -1,7 +1,7 @@
 from aiogram.types import User
 from aiogram_dialog import DialogManager
 from fluentogram import TranslatorRunner
-from bot.dependency.container import DependencyContainer
+from bot.core.dependency.container import DependencyContainer
 
 
 async def api_start(

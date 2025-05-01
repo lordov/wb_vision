@@ -3,10 +3,9 @@ from aiogram import Bot
 from cryptography.fernet import Fernet
 from fluentogram import TranslatorRunner
 from sqlalchemy.ext.asyncio import AsyncSession
-from functools import cached_property
 
 from taskiq_nats import NatsBroker
-from bot.tasks.taskiq_worker import broker
+from bot.services.tasks.taskiq_worker import broker
 
 from bot.services.notifications import NotificationService
 from bot.services.api_key import ApiKeyService
@@ -59,7 +58,7 @@ class DependencyContainer:
     async def api_key_service(self) -> ApiKeyService:
         if self._api_key_service is None:
             uow = await self.create_uow()  # Создаем UnitOfWork
-            self._api_key_service = ApiKeyService(uow=uow, fernet=self._fernet)  # Используем _fernet
+            self._api_key_service = ApiKeyService(uow=uow, fernet=self._fernet)
         return self._api_key_service
 
     @property
