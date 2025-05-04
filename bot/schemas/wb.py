@@ -43,7 +43,7 @@ class OrderWBCreate(BaseModel):
 
     class Config:
         populate_by_name = True
-        allow_population_by_field_name = True
+        validate_by_name = True
 
 
 class SalesWBCreate(BaseModel):
@@ -80,7 +80,7 @@ class SalesWBCreate(BaseModel):
 
     class Config:
         populate_by_name = True
-        allow_population_by_field_name = True
+        validate_by_name = True
 
 
 class StocksWBCreate(BaseModel):
@@ -106,4 +106,4 @@ class StocksWBCreate(BaseModel):
 
     class Config:
         populate_by_name = True
-        allow_population_by_field_name = True
+        validate_by_name = True

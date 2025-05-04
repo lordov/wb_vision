@@ -4,9 +4,6 @@ from cryptography.fernet import Fernet
 from fluentogram import TranslatorRunner
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from taskiq_nats import NatsBroker
-from bot.services.tasks.taskiq_worker import broker
-
 from bot.services.notifications import NotificationService
 from bot.services.api_key import ApiKeyService
 from bot.services.subscription import SubscriptionService
@@ -79,9 +76,3 @@ class DependencyContainer:
                 api_key_service=self.api_key_service,
             )
         return self._wb_service
-
-    @property
-    async def broker(self) -> NatsBroker:
-        if self._broker is None:
-            self._broker = broker
-        return self._broker

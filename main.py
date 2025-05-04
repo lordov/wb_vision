@@ -13,7 +13,7 @@ from redis.asyncio.client import Redis
 from redis.exceptions import ConnectionError
 
 from bot.core.config import settings
-from bot.core.security import fernet
+from bot.core.dependency.container_init import init_container
 from bot.core.dependency.container import DependencyContainer
 # from tgbot.dialogs.admin_dialog import admin_panel
 from bot.core.logging import setup_logging, app_logger
@@ -22,8 +22,6 @@ from bot.handlers.dialogs.user.api_connect.dialog import api_connect
 # from tgbot.dialogs.broadcast_dialog import broadcast_dialog
 
 from bot.database.engine import async_session_maker, engine
-# from tgbot.services.scheduler.scheduler import (
-#     setup_tasks, start_scheduler, TaskFactory)
 from bot.middlewares.uow import UnitOfWorkMiddleware
 from bot.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.utils.logger_config import configure_logging
@@ -101,12 +99,8 @@ async def main():
     app_logger.info('Starting bot...', context='init')
     translator_hub: TranslatorHub = create_translator_hub()
 
-    container = DependencyContainer(
-        bot_token=settings.bot.token.get_secret_value(),
-        i18n=translator_hub,
-        fernet=fernet,
-        session_maker=async_session_maker
-    )
+    container = init_container()
+
     # Set up the dispatcher with the chosen storage
     dp: Dispatcher = await setup_dispatcher(container)
 
