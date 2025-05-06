@@ -31,7 +31,8 @@ class BotSettings(BaseSettings):
 class AppSettings(BaseSettings):
     fernet_secret: SecretStr
     trial_days: int = 14  # длительность пробного периода в днях
-
+    debug: bool = True
+    
     postgres: PostgresSettings
     redis: RedisSettings
     nats: NatsSettings

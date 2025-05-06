@@ -21,17 +21,26 @@ broker = InMemoryBroker()
 # broker.add_middlewares(SimpleRetryMiddleware())
 # scheduler = TaskiqScheduler(broker, sources=[LabelScheduleSource(broker)])
 
+
 @broker.on_event(TaskiqEvents.WORKER_STARTUP)
 async def startup(state: TaskiqState) -> None:
     container = init_container()
     # Here we store connection pool on startup for later use.
     state.container = container
 
+
+def container_dep(context: Annotated[Context, TaskiqDepends()]) -> DependencyContainer:
+    return context.state.container
+
+
 @broker.task
-async def add_one(value: int, context: Annotated[Context, TaskiqDepends()]) -> int:
+async def add_one(
+    value: int,
+    container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
+) -> int:
     print(f"Executing add_one with value={value}")
-    container: DependencyContainer =context.state.container
     bot = container.bot
+    await bot.send_message(settings.bot.admin_id, f"Executing add_one with value={value}")
     await asyncio.sleep(1)
     return value * value
 

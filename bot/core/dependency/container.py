@@ -1,15 +1,16 @@
-from typing import Callable
+from typing import Type, TypeVar, Callable
 from aiogram import Bot
 from cryptography.fernet import Fernet
 from fluentogram import TranslatorRunner
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.services.notifications import NotificationService
+from bot.database.uow import UnitOfWork
 from bot.services.api_key import ApiKeyService
 from bot.services.subscription import SubscriptionService
+from bot.services.notifications import NotificationService
 from bot.services.wb_service import WBService
-from bot.database.uow import UnitOfWork
 
+T = TypeVar("T")
 
 class DependencyContainer:
     def __init__(
@@ -17,62 +18,54 @@ class DependencyContainer:
         bot_token: str,
         i18n: TranslatorRunner,
         fernet: Fernet,
-        session_maker: Callable[[], AsyncSession]
+        session_maker: Callable[[], AsyncSession],
     ) -> None:
-        # Приватные аттрибуты
         self._bot_token = bot_token
         self._fernet = fernet
         self._session_maker = session_maker
         self._i18n = i18n
 
-        # Ленивая инициализация сервисов
-        self._bot = None
-        self._notification_service = None
-        self._api_key_service = None
-        self._subscription_service = None
-        self._wb_service = None
-        self._broker = None
+        self._bot: Bot | None = None
+        self._services: dict[Type, object] = {}
 
     @property
     def bot(self) -> Bot:
         if self._bot is None:
-            self._bot = Bot(token=self._bot_token)  # Используем _bot_token
+            self._bot = Bot(token=self._bot_token)
         return self._bot
 
     async def create_uow(self) -> UnitOfWork:
-        """Создает новый UnitOfWork с новой сессией."""
-        session = self._session_maker()  # Используем _session_maker
-        uow = UnitOfWork(session)
-        return uow
+        return UnitOfWork(self._session_maker())
 
-    @property
-    async def notification_service(self) -> NotificationService:
-        if self._notification_service is None:
-            self._notification_service = NotificationService(bot=self.bot)
-        return self._notification_service
+    async def get(self, service_type: Type[T]) -> T:
+        if service_type in self._services:
+            return self._services[service_type]
 
-    @property
-    async def api_key_service(self) -> ApiKeyService:
-        if self._api_key_service is None:
-            uow = await self.create_uow()  # Создаем UnitOfWork
-            self._api_key_service = ApiKeyService(uow=uow, fernet=self._fernet)
-        return self._api_key_service
+        instance = await self._build(service_type)
+        self._services[service_type] = instance
+        return instance
 
-    @property
-    async def subscription_service(self) -> SubscriptionService:
-        if self._subscription_service is None:
+    async def _build(self, service_type: Type[T]) -> T:
+        if service_type is NotificationService:
+            return NotificationService(bot=self.bot)
+
+        elif service_type is ApiKeyService:
             uow = await self.create_uow()
-            self._subscription_service = SubscriptionService(uow=uow)
-        return self._subscription_service
+            return ApiKeyService(uow=uow, fernet=self._fernet)
 
-    @property
-    async def wb_service(self) -> WBService:
-        if self._wb_service is None:
+        elif service_type is SubscriptionService:
             uow = await self.create_uow()
-            self._wb_service = WBService(
+            return SubscriptionService(uow=uow)
+
+        elif service_type is WBService:
+            uow = await self.create_uow()
+            notification_service = await self.get(NotificationService)
+            api_key_service = await self.get(ApiKeyService)
+            return WBService(
                 uow=uow,
-                i18n=self._i18n,  # Используем _i18n
-                notification_service=self.notification_service,
-                api_key_service=self.api_key_service,
-            )
-        return self._wb_service
+                i18n=self._i18n,
+                notification_service=notification_service,
+                api_key_service=api_key_service,
+            ) 
+
+        raise ValueError(f"Unknown service: {service_type}")

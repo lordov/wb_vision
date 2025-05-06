@@ -2,6 +2,7 @@ from aiogram.types import User
 from aiogram_dialog import DialogManager
 from fluentogram import TranslatorRunner
 from bot.core.dependency.container import DependencyContainer
+from bot.services.api_key import ApiKeyService
 
 
 async def api_start(
@@ -12,7 +13,7 @@ async def api_start(
     **kwargs
 ) -> dict:
     async with await container.create_uow():
-        api_key_service = await container.api_key_service
+        api_key_service = await container.get(ApiKeyService)
         key = await api_key_service.get_user_key(event_from_user.id, "wb_stats")
 
     has_key = key is not None
