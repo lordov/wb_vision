@@ -19,18 +19,24 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
     async def add_orders_bulk(self, orders: list[OrderWBCreate]) -> None:
         """Добавить заказы пачкой"""
         if not orders:
-            return
+            return []
 
         data = [order.model_dump(by_alias=True) for order in orders]
 
-        stmt = insert(OrdersWB).values(data)
-        stmt = stmt.on_conflict_do_nothing(
-            index_elements=['date', 'user_id',
-                            'srid', 'nm_id', 'isCancel', 'tech_size']
+        stmt = (
+            insert(OrdersWB)
+            .values(data)
+            .on_conflict_do_nothing(
+                index_elements=['date', 'user_id', 'srid',
+                                'nm_id', 'isCancel', 'tech_size']
+            )
+            .returning(OrdersWB)  # Вернуть только реально вставленные строки
         )
-        await self.session.execute(stmt)
 
-    async def add_orders_bulk(self, orders: list[SalesWBCreate]) -> None:
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    async def add_sales_bulk(self, orders: list[SalesWBCreate]) -> None:
         """Добавить продажи пачкой"""
         if not orders:
             return

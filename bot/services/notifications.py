@@ -1,22 +1,53 @@
-import json
 from aiogram import Bot
-from bot.core.logging import app_logger
-from nats.js.client import JetStreamContext
+from fluentogram import TranslatorRunner
+from bot.database.uow import UnitOfWork
+from bot.schemas.wb import OrderWBCreate
 
 
 class NotificationService:
-    def __init__(self, js: JetStreamContext, subject: str):
-        self.js = js
-        self.subject = subject
+    def __init__(
+            self,
+            uow: UnitOfWork,
+            i18n: TranslatorRunner,
+            bot: Bot
+            ):
+        self.uow = uow
+        self.bot = bot
+        self.i18n = i18n
 
-    async def send_message(self, user_id: int, text: str) -> None:
-        headers = {
-            "Tg-Broadcast-Chat-ID": str(user_id),
-        }
-        payload = json.dumps({"text": text}).encode("utf-8")
-        await self.js.publish(
-            subject=self.subject,
-            payload=payload,
-            headers=headers
+    async def send_message(self, user_id: int, orders: list[OrderWBCreate]) -> None:
+        for order in orders:
+            text = self._generate_text(user_id, order)
+            try:
+                await self.bot.send_photo(
+                    chat_id=user_id,
+                    photo=f"https://basket-12.wbbasket.ru/vol1711/part171150/171150581/images/c516x688/1.webp",
+                    caption=text
+                )
+
+            except Exception:
+                ...
+
+    async def _generate_text(self, user_id: int, order: OrderWBCreate) -> str:
+        """Формирует текст уведомления на основе данных заказа."""
+        order_date = order.date.date()
+
+        async with self.uow:
+            today_counter = await self.uow.wb_orders.get_counter(user_id, order_date)
+            today_amount = await self.uow.wb_orders.get_amount(user_id, order_date)
+
+        text = self.i18n.get(
+            barcode=order.barcode,
+            subject=order.subject,
+            size=order.tech_size,
+            warehouse=order.warehouse_name,
+            price=int(order.total_price),
+            today_cntr=today_counter,
+            amount=today_amount,
         )
-        app_logger.info(f"Message sent to {user_id}")
+        return text
+
+    async def _get_photo(self, nm_id: int):
+        "Находим фотку на вб"
+        url = ...
+        return url

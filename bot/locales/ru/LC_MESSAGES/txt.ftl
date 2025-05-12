@@ -71,7 +71,7 @@ api-key-invalid-request = API-ключ не прошёл проверку — о
 api-key-success = API-ключ успешно сохранён и активирован! Вы будете получать уведомления.
 
 api-key-trial-expired = Пробный период уже использован. Требуется подписка.
-subscribe-trial-activeated = Пробный период активирован!.
+subscribe-trial-activeated = Пробный период активирован!
 
 subscribe-to-activate-key = API-ключ установлен.
     Чтобы получать уведомления, необходимо активировать подписку.
