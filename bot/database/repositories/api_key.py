@@ -97,3 +97,11 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
                 ))
         except SQLAlchemyError as e:
             raise e
+    
+    async def get_all_keys(self) -> list[ApiKey]:
+        stmt = select(ApiKey)
+        try:
+            result = await self.session.execute(stmt)
+        except Exception as e:
+            print(e)
+        return result.scalars().all()

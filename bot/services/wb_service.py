@@ -31,7 +31,7 @@ class WBService:
         # Валидация через Pydantic
         try:
             validated_orders: list[OrderWBCreate] = [
-                OrderWBCreate(**order) for order in orders_data
+                OrderWBCreate(**order, user_id=user_id) for order in orders_data
             ]
         except Exception as e:
             # Можно залогировать ошибку валидации
@@ -40,7 +40,6 @@ class WBService:
         async with self.uow:
             # Сохраняем только новые заказы, возвращаем реально вставленные
             new_orders = await self.uow.wb_orders.add_orders_bulk(
-                user_id=user_id,
                 orders=validated_orders
             )
             await self.uow.commit()

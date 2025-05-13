@@ -26,10 +26,12 @@ class BaseAPIClient:
 
     def __init__(
         self,
-        auth_strategy: AuthStrategy,
+        # auth_strategy: AuthStrategy,
+        token: str,
         cache_ttl: int = 3600
     ):
-        self.auth_strategy = auth_strategy
+        # self.auth_strategy = auth_strategy
+        self.token = token
         self.cache = TTLCache(maxsize=1000, ttl=cache_ttl)
 
         # Логгеры
@@ -136,7 +138,8 @@ class BaseAPIClient:
         """
         retries = 0
         # Заголовки из стратегии
-        auth_headers = self.auth_strategy.get_headers()
+        auth_headers = {
+            "Authorization": f"{self.token}"}
         caller = inspect.stack()[1].function
         while retries <= max_retries:
             async with aiohttp.ClientSession() as session:

@@ -12,6 +12,7 @@ from bot.services.wb_service import WBService
 
 T = TypeVar("T")
 
+
 class DependencyContainer:
     def __init__(
         self,
@@ -47,7 +48,8 @@ class DependencyContainer:
 
     async def _build(self, service_type: Type[T]) -> T:
         if service_type is NotificationService:
-            return NotificationService(bot=self.bot)
+            return NotificationService(
+                uow=await self.create_uow(), i18n=self._i18n, bot=self.bot)
 
         elif service_type is ApiKeyService:
             uow = await self.create_uow()
@@ -66,6 +68,6 @@ class DependencyContainer:
                 i18n=self._i18n,
                 notification_service=notification_service,
                 api_key_service=api_key_service,
-            ) 
+            )
 
         raise ValueError(f"Unknown service: {service_type}")

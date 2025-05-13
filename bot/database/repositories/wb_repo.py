@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Type
-from sqlalchemy import Date, cast, func, select
+from sqlalchemy import Date, cast, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError

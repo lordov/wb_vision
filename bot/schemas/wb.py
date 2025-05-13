@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class OrderWBCreate(BaseModel):
+    user_id: int
     date: datetime
     last_change_date: datetime = Field(..., alias="lastChangeDate")
     supplier_article: str = Field(..., alias="supplierArticle")

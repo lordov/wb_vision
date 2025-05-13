@@ -55,20 +55,25 @@ async def fetch_orders_for_all_keys(container: Annotated[DependencyContainer, Ta
     async with await container.create_uow():
         api_keys = await service.get_all_decrypted_keys()
         for key in api_keys:
-            await fetch_and_save_orders_for_key.kiq(key)
+            await fetch_and_save_orders_for_key.kiq(
+            user_id=key.user_id,
+            key_encrypted=key.key_encrypted,
+        )
+        print(f'{key.key_encrypted} отправлен в задачу')
 
 
 @broker.task
 async def fetch_and_save_orders_for_key(
-    api_key: ApiKey,
+    user_id: int,
+    key_encrypted: str,
     container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
 ) -> None:
-    service = await container.get(WBService)
     async with await container.create_uow():
-        new_orders = await service.fetch_and_save_orders(api_key=api_key.key_encrypted, user_id=api_key.user_id)
+        service = await container.get(WBService)
+        new_orders = await service.fetch_and_save_orders(api_key=key_encrypted, user_id=user_id)
 
         if new_orders:
-            await notify_user_about_orders.kiq(api_key.user_id, new_orders)
+            await notify_user_about_orders.kiq(user_id, new_orders)
 
 
 @broker.task
@@ -83,20 +88,12 @@ async def notify_user_about_orders(
 
 async def main() -> None:
     try:
-        # Never forget to call startup in the beginning.
         await broker.startup()
-        # Send the task to the broker.
-        task = await add_one.kiq(15)
-        # Wait for the result.
-        result = await task.wait_result(timeout=30)
-        print(f"Task execution took: {result.execution_time} seconds.")
-        if not result.is_err:
-            print(f"Returned value: {result.return_value}")
-        else:
-            print("Error found while executing task.")
+        task = await fetch_orders_for_all_keys.kiq()
+        api_keys = await task.wait_result(timeout=6000)
+        await broker.shutdown()
     except (Exception, TimeoutError) as e:
         print(e)
-    finally:
         await broker.shutdown()
 
 

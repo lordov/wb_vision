@@ -42,9 +42,12 @@ class ApiKeyService:
 
     async def get_all_decrypted_keys(self) -> list[ApiKey]:
         app_logger.info("Getting all decrypted API keys")
-
-        # Получаем все ключи из репозитория
-        keys = await self.repo.get_all()
+        try:
+            # Получаем все ключи из репозитория
+            keys = await self.repo.get_all_keys()
+        except Exception as e:
+            app_logger.warning(f"Failed to fetch API keys: {e}")
+            return []
 
         decrypted_keys = []
 
