@@ -4,6 +4,7 @@ from bot.api.auth.strategy import APIKeyAuthStrategy
 from bot.api.wb import WBAPIClient
 from bot.database.models import ApiKey
 from bot.database.uow import UnitOfWork
+from bot.schemas.wb import ApiKeyWithTelegramDTO
 from bot.services.subscription import SubscriptionService
 from ..core.logging import app_logger
 
@@ -40,7 +41,7 @@ class ApiKeyService:
             return None
         return await self.decrypt_key(key.key_encrypted)
 
-    async def get_all_decrypted_keys(self) -> list[ApiKey]:
+    async def get_all_decrypted_keys(self) -> list[ApiKeyWithTelegramDTO]:
         app_logger.info("Getting all decrypted API keys")
         try:
             # Получаем все ключи из репозитория
@@ -57,12 +58,13 @@ class ApiKeyService:
                 decrypted_key = await self.decrypt_key(key.key_encrypted)
 
                 decrypted_keys.append(
-                    ApiKey(
+                    ApiKeyWithTelegramDTO(
                         id=key.id,
                         user_id=key.user_id,
                         title=key.title,
                         key_encrypted=decrypted_key,
                         is_active=key.is_active,
+                        telegram_id=key.user.telegram_id
                     )
                 )
             except ApiKeyDecryptionError as e:

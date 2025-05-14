@@ -49,6 +49,6 @@ class WBService:
 
         # Генерируем тексты уведомлений только по новым заказам
         orders_to_send: list[OrderWBCreate] = [
-            OrderWBCreate(**order) for order in new_orders
+            OrderWBCreate.model_validate(order) for order in new_orders
         ]
         return orders_to_send

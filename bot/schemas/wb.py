@@ -45,6 +45,7 @@ class OrderWBCreate(BaseModel):
     class Config:
         populate_by_name = True
         validate_by_name = True
+        from_attributes = True
 
 
 class SalesWBCreate(BaseModel):
@@ -108,3 +109,12 @@ class StocksWBCreate(BaseModel):
     class Config:
         populate_by_name = True
         validate_by_name = True
+
+
+class ApiKeyWithTelegramDTO(BaseModel):
+    id: int
+    user_id: int
+    title: str
+    key_encrypted: str
+    is_active: bool
+    telegram_id: int

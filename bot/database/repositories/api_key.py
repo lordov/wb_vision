@@ -1,4 +1,5 @@
 from sqlalchemy import select, update
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -99,7 +100,7 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
             raise e
     
     async def get_all_keys(self) -> list[ApiKey]:
-        stmt = select(ApiKey)
+        stmt = select(ApiKey).options(joinedload(ApiKey.user))
         try:
             result = await self.session.execute(stmt)
         except Exception as e:

@@ -8,7 +8,11 @@ from aiogram_dialog import DialogManager, StartMode
 
 from fluentogram import TranslatorRunner
 
+from bot.core.dependency.container import DependencyContainer
 from bot.database.uow import UnitOfWork
+from bot.services.api_key import ApiKeyService
+from bot.services.notifications import NotificationService
+from bot.services.wb_service import WBService
 from .states import UserPanel, Support
 from bot.core.config import settings
 
@@ -47,6 +51,47 @@ async def cmd_start(
 @router.message(Command('lk'))
 async def lk_start(message: Message, dialog_manager: DialogManager):
     await dialog_manager.start(UserPanel.start, mode=StartMode.RESET_STACK)
+
+
+@router.message(Command("task"))
+async def task(
+    message: Message,
+    i18n: TranslatorRunner,
+    container: DependencyContainer,
+):
+    async def notify_user_about_orders(
+        user_id: int,
+        telegram_id: int,
+        orders: list[dict],
+        container: DependencyContainer
+    ):
+        service = await container.get(NotificationService)
+        await service.send_message(user_id=user_id, telegram_id=telegram_id, orders=orders)
+
+    async def fetch_and_save_orders_for_key(
+        user_id: int,
+        telegram_id: int,
+        key_encrypted: str,
+        container: DependencyContainer
+    ):
+        async with await container.create_uow():
+            service = await container.get(WBService)
+            new_orders = await service.fetch_and_save_orders(api_key=key_encrypted, user_id=user_id)
+
+            if new_orders:
+                await notify_user_about_orders(user_id, telegram_id, new_orders, container=container)
+
+    service = await container.get(ApiKeyService)
+    async with await container.create_uow():
+        api_keys = await service.get_all_decrypted_keys()
+        for key in api_keys:
+            await fetch_and_save_orders_for_key(
+                user_id=key.user_id,
+                key_encrypted=key.key_encrypted,
+                telegram_id=key.telegram_id,
+                container=container
+            )
+        print(f'{key.key_encrypted} отправлен в задачу')
 
 
 @router.message(Command('support'))

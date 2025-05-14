@@ -53,6 +53,7 @@ async def add_one(
 async def fetch_orders_for_all_keys(container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]) -> None:
     service = await container.get(ApiKeyService)
     async with await container.create_uow():
+        # ещё надо tg_id
         api_keys = await service.get_all_decrypted_keys()
         for key in api_keys:
             await fetch_and_save_orders_for_key.kiq(

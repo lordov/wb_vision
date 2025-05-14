@@ -81,14 +81,14 @@ donate-text = Для поддержки проекта
 back-btn = ◀️ Назад
 
 order-text = {$date}
-    📊<b>Заказ [{$cntr}]: {$total_price}₽</b>
-    💶Сегодня: {$today_cntr} на {$amount}₽\
+    📊<b>Заказ [{$counter}]: {$total_price}₽</b>
+    💶Сегодня: {$counter} на {$amount}₽
     🆔Арт: <a href='https://www.wildberries.ru/catalog/{$nm_id}/detail.aspx?targetUrl=SP'>{$nm_id}</a>
-    🔖Cкидка: {$discont}%
+    🔖Cкидка: {$discount}%
     🏷Категория: {$category}
     📁{$subject}
-    📇Бренд: {$brend}
-    🆔Артикул Поставщика: <a href='https://www.wildberries.ru/catalog/{$nm_id}/detail.aspx?targetUrl=SP'>{$article}</a>\n\
-    🏦Сегодня таких: {$totals_today}₽
-    📑Вчера таких: {$totals_yesterdey}₽
-    🛄{$warehouse_text}"
+    📇Бренд: {$brand}
+    🆔Артикул Поставщика: <a href='https://www.wildberries.ru/catalog/{$nm_id}/detail.aspx?targetUrl=SP'>{$article}</a>
+    🏦Сегодня таких: {$total_today}₽
+    📑Вчера таких: {$total_yesterday}₽
+    🛄{$warehouse_text}
