@@ -50,29 +50,7 @@ class ApiKeyService:
             app_logger.warning(f"Failed to fetch API keys: {e}")
             return []
 
-        decrypted_keys = []
-
-        for key in keys:
-            try:
-                # Расшифровка ключа
-                decrypted_key = await self.decrypt_key(key.key_encrypted)
-
-                decrypted_keys.append(
-                    ApiKeyWithTelegramDTO(
-                        id=key.id,
-                        user_id=key.user_id,
-                        title=key.title,
-                        key_encrypted=decrypted_key,
-                        is_active=key.is_active,
-                        telegram_id=key.user.telegram_id
-                    )
-                )
-            except ApiKeyDecryptionError as e:
-                app_logger.warning(
-                    f"Failed to decrypt API key with id {key.id}: {e}")
-                continue  # Если не удалось расшифровать, пропускаем этот ключ
-
-        return decrypted_keys
+        return keys
 
     async def add_encrypt_key(self, telegram_id: int, raw_key: str, title: str = "API Key") -> ApiKey:
         user = await self.user_repo.get_by_telegram_id(telegram_id)

@@ -3,9 +3,11 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
+from bot.schemas.wb import ApiKeyWithTelegramDTO
+
 from ..models import ApiKey
 from .base import SQLAlchemyRepository
-from ...core.security import encrypt_api_key
+from ...core.logging import db_logger
 
 
 class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
@@ -99,10 +101,23 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
         except SQLAlchemyError as e:
             raise e
     
-    async def get_all_keys(self) -> list[ApiKey]:
+    async def get_all_keys(self) -> list[ApiKeyWithTelegramDTO]:
         stmt = select(ApiKey).options(joinedload(ApiKey.user))
         try:
             result = await self.session.execute(stmt)
+            api_keys: list[ApiKey] = result.scalars().all()
         except Exception as e:
-            print(e)
-        return result.scalars().all()
+            db_logger.error(e)
+            return []
+
+        return [
+            ApiKeyWithTelegramDTO(
+                id=key.id,
+                user_id=key.user_id,
+                title=key.title,
+                key_encrypted=key.key_encrypted,  # Предполагается, что ты уже умеешь расшифровывать
+                is_active=key.is_active,
+                telegram_id=key.user.telegram_id if key.user else None,
+            )
+            for key in api_keys
+        ]

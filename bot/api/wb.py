@@ -1,4 +1,6 @@
 from typing import Optional
+
+from bot.schemas.wb import OrderWBCreate
 from .base_api_client import BaseAPIClient
 
 
@@ -25,19 +27,21 @@ class WBAPIClient(BaseAPIClient):
     # Заказы
     async def get_orders(
             self,
-            date_from: str = '2025-05-13'
-    ) -> Optional[dict]:
+            user_id: int,
+            date_from: str = '2025-05-15'
+    ) -> list[OrderWBCreate]:
         """
         Получение данных о заказах начиная с указанной даты.
 
         :param date_from: Дата начала периода в формате YYYY-MM-DD.
         :param db_manager: Объект DatabaseManager для взаимодействия с базой данных.
-        :return: JSON с данными о заказах или None в случае ошибки.
+        :return: list[OrderWBCreate] с данными о заказах или None в случае ошибки.
         """
         url = f"https://statistics-api.wildberries.ru/api/v1/supplier/orders?dateFrom={
             date_from}"
-        return await self._request("GET", url)
-    
+        orders_data = await self._request("GET", url)
+        return [OrderWBCreate(**order, user_id=user_id) for order in orders_data]
+
     async def ping_wb(self):
         url = "https://statistics-api.wildberries.ru/ping"
         response = await self._request("GET", url)

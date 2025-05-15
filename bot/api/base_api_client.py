@@ -9,6 +9,7 @@ from cachetools import TTLCache
 from collections import deque
 from .auth.strategy import AuthStrategy
 from ..core.logging import api_logger
+from ..core.security import decrypt_api_key
 
 
 class BaseAPIClient:
@@ -36,7 +37,6 @@ class BaseAPIClient:
 
         # Логгеры
         self.api_logger = api_logger
-
 
     def set_cache(self, cache: TTLCache) -> None:
         """
@@ -139,7 +139,7 @@ class BaseAPIClient:
         retries = 0
         # Заголовки из стратегии
         auth_headers = {
-            "Authorization": f"{self.token}"}
+            "Authorization": f"{decrypt_api_key(self.token)}"}
         caller = inspect.stack()[1].function
         while retries <= max_retries:
             async with aiohttp.ClientSession() as session:

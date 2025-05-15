@@ -3,8 +3,9 @@ from fluentogram import TranslatorRunner
 from bot.api.wb import WBAPIClient
 from bot.schemas.wb import OrderWBCreate
 from bot.services.api_key import ApiKeyService
-from ..services.notifications import NotificationService
 from bot.database.uow import UnitOfWork
+from bot.core.logging import app_logger
+from ..services.notifications import NotificationService
 
 
 class WBService:
@@ -20,35 +21,24 @@ class WBService:
         self.notification_service = notification_service
         self.i18n = i18n
 
-    async def fetch_and_save_orders(self, user_id: int, api_key: str) -> list[str] | None:
+    async def fetch_and_save_orders(self, user_id: int, api_key: str) -> list[OrderWBCreate] | None:
         """Получение заказов WB, сохранение в БД и формирование уведомлений по новым заказам."""
         api_client = WBAPIClient(token=api_key)
-        orders_data = await api_client.get_orders()
+        orders = await api_client.get_orders(user_id)
 
-        if not orders_data:
-            return
-
-        # Валидация через Pydantic
-        try:
-            validated_orders: list[OrderWBCreate] = [
-                OrderWBCreate(**order, user_id=user_id) for order in orders_data
-            ]
-        except Exception as e:
-            # Можно залогировать ошибку валидации
+        if not orders:
             return
 
         async with self.uow:
             # Сохраняем только новые заказы, возвращаем реально вставленные
             new_orders = await self.uow.wb_orders.add_orders_bulk(
-                orders=validated_orders
+                orders=orders
             )
             await self.uow.commit()
+            app_logger.info(f"New orders added for {user_id}")
 
         if not new_orders:
+            app_logger.info(f"No new orders for {user_id}")
             return
 
-        # Генерируем тексты уведомлений только по новым заказам
-        orders_to_send: list[OrderWBCreate] = [
-            OrderWBCreate.model_validate(order) for order in new_orders
-        ]
-        return orders_to_send
+        return new_orders

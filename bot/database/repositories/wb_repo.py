@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Type
-from sqlalchemy import Date, Numeric, cast, func, select, update
+from sqlalchemy import Date, Numeric, cast, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -16,13 +16,13 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
     def __init__(self, session: AsyncSession, model: Type[T]):
         super().__init__(session, model)
 
-    async def add_orders_bulk(self, orders: list[OrderWBCreate]) -> list[OrdersWB]:
+    async def add_orders_bulk(self, orders: list[OrderWBCreate]) -> list[OrderWBCreate]:
         """Добавить заказы по одному для проверки."""
         db_logger.info("add_orders_bulk", count=len(orders))
         if not orders:
             return []
 
-        inserted_orders = []
+        new_orders = []
         for order in orders:
             data = order.model_dump()
             stmt = (
@@ -38,11 +38,11 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
                 result = await self.session.execute(stmt)
                 inserted_order = result.scalar_one_or_none()
                 if inserted_order:
-                    inserted_orders.append(inserted_order)
+                    new_orders.append(inserted_order)
             except SQLAlchemyError as e:
                 db_logger.error("Error in add_orders_bulk", error=str(e))
 
-        return inserted_orders
+        return[OrderWBCreate.model_validate(order) for order in new_orders]
 
     async def add_sales_bulk(self, orders: list[SalesWBCreate]) -> None:
         """Добавить продажи пачкой"""

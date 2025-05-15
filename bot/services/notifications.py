@@ -1,3 +1,4 @@
+import asyncio
 from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError
 from fluentogram import TranslatorRunner, TranslatorHub
@@ -18,11 +19,13 @@ class NotificationService:
         self.i18n = i18n.get_translator_by_locale('ru')
 
     async def send_message(
-            self, 
+            self,
             user_id: int,
             telegram_id: int,
-            orders: list[OrderWBCreate]
-            ) -> None:
+            orders: list[dict]
+    ) -> None:
+        orders = [OrderWBCreate.model_validate(order) for order in orders]
+        orders = sorted(orders, key=lambda x: x.date)
         for order in orders:
             text = await self._generate_text(user_id, order)
             try:
@@ -32,6 +35,7 @@ class NotificationService:
                     photo=await self._get_photo(order.nm_id),
                     caption=text, parse_mode="HTML"
                 )
+                await asyncio.sleep(5)
 
             except TelegramForbiddenError:
                 ...
@@ -42,20 +46,19 @@ class NotificationService:
         """Формирует текст уведомления на основе данных заказа."""
         app_logger.info("Generating notification text", user_id=user_id)
 
-        order_date = order.date.date()
         total_price = round(order.total_price *
                             (1 - order.discount_percent / 100))
         async with self.uow:
-            counter = await self.uow.wb_orders.get_counter(user_id, order_date)
-            amount = await self.uow.wb_orders.get_amount(user_id, order_date)
+            counter = await self.uow.wb_orders.get_counter(user_id, order.date)
+            amount = await self.uow.wb_orders.get_amount(user_id, order.date)
             total_today = await self.uow.wb_orders.get_total_today(
-                user_id, order.nm_id, order_date, total_price)
+                user_id, order.nm_id, order.date, total_price)
             total_yesterday = await self.uow.wb_orders.get_total_yesterday(
-                user_id, order.nm_id, order_date)
+                user_id, order.nm_id, order.date)
 
         text = self.i18n.get(
             "order-text",
-            date=order_date.strftime("%Y-%m-%d"),
+            date=order.date.strftime("%Y-%m-%d"),
             counter=counter,
             total_price=total_price,
             amount=amount,
