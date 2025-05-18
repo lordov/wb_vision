@@ -5,6 +5,17 @@ from fluentogram import TranslatorRunner, TranslatorHub
 from bot.database.uow import UnitOfWork
 from bot.schemas.wb import OrderWBCreate
 from bot.core.logging import app_logger
+from aiolimiter import AsyncLimiter
+
+# 1 запрос в секунду на пользователя
+user_limiters: dict[int, AsyncLimiter] = {}
+
+
+def get_user_limiter(user_id: int) -> AsyncLimiter:
+    if user_id not in user_limiters:
+        # 1 message per second
+        user_limiters[user_id] = AsyncLimiter(1, 5)
+    return user_limiters[user_id]
 
 
 class NotificationService:
@@ -20,65 +31,25 @@ class NotificationService:
 
     async def send_message(
             self,
-            user_id: int,
             telegram_id: int,
-            orders: list[dict]
+            texts: list[str],
     ) -> None:
-        orders = [OrderWBCreate.model_validate(order) for order in orders]
-        orders = sorted(orders, key=lambda x: x.date)
-        for order in orders:
-            text = await self._generate_text(user_id, order)
+        limiter = get_user_limiter(telegram_id)
+        for text in texts:
             try:
-                app_logger.info("Sending notification", user_id=user_id)
-                await self.bot.send_photo(
-                    chat_id=telegram_id,
-                    photo=await self._get_photo(order.nm_id),
-                    caption=text, parse_mode="HTML"
-                )
-                await asyncio.sleep(5)
-
+                app_logger.info("Sending notification", user_id=telegram_id)
+                async with limiter:
+                    await self.bot.send_photo(
+                        chat_id=telegram_id,
+                        photo=f"https://basket-12.wbbasket.ru/vol1711/part171150/171150581/images/c516x688/1.webp",
+                        caption=text, parse_mode="HTML"
+                    )
             except TelegramForbiddenError:
                 ...
             except Exception as e:
                 print(e)
 
-    async def _generate_text(self, user_id: int, order: OrderWBCreate) -> str:
-        """Формирует текст уведомления на основе данных заказа."""
-        app_logger.info("Generating notification text", user_id=user_id)
-
-        total_price = round(order.total_price *
-                            (1 - order.discount_percent / 100))
-        async with self.uow:
-            counter = await self.uow.wb_orders.get_counter(user_id, order.date)
-            amount = await self.uow.wb_orders.get_amount(user_id, order.date)
-            total_today = await self.uow.wb_orders.get_total_today(
-                user_id, order.nm_id, order.date, total_price)
-            total_yesterday = await self.uow.wb_orders.get_total_yesterday(
-                user_id, order.nm_id, order.date)
-
-        text = self.i18n.get(
-            "order-text",
-            date=order.date.strftime("%Y-%m-%d"),
-            counter=counter,
-            total_price=total_price,
-            amount=amount,
-            nm_id=order.nm_id,
-            discount=order.discount_percent,
-            category=order.category,
-            subject=order.subject,
-            brand=order.brand,
-            article=order.supplier_article,
-            total_today=total_today,
-            total_yesterday=total_yesterday,
-            warehouse_text='чюпеп'
-        )
-        return await self._clean_text(text)
-
     async def _get_photo(self, nm_id: int):
         "Находим фотку на вб"
         url = f"https://basket-12.wbbasket.ru/vol1711/part171150/171150581/images/c516x688/1.webp"
         return url
-
-    async def _clean_text(self, text: str) -> str:
-        # Удаляем управляющие символы \u2068 (LRI) и \u2069 (PDI). Для переменных Fluenta
-        return text.replace('\u2068', '').replace('\u2069', '').replace('\xa0', '')

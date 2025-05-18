@@ -7,6 +7,7 @@ import asyncio
 
 from bot.core.dependency.container import DependencyContainer
 from bot.core.dependency.container_init import init_container
+from bot.schemas.wb import OrderWBCreate
 from bot.services.api_key import ApiKeyService
 from bot.services.notifications import NotificationService
 from bot.services.wb_service import WBService
@@ -72,24 +73,23 @@ async def fetch_and_save_orders_for_key(
 ):
     async with await container.create_uow():
         service = await container.get(WBService)
-        new_orders = await service.fetch_and_save_orders(api_key=api_key, user_id=user_id)
-        if not new_orders:
+        texts = await service.fetch_and_save_orders(api_key=api_key, user_id=user_id)
+        if not texts:
             app_logger.info(f'Cancel task for {user_id}')
             return
 
-        if new_orders:
-            await notify_user_about_orders.kiq(user_id, telegram_id, new_orders)
+        if texts:
+            await notify_user_about_orders.kiq(telegram_id, texts)
 
 
-@broker.task
+@broker.task()
 async def notify_user_about_orders(
-    user_id: int,
     telegram_id: int,
-    orders: list[dict],
+    texts: list[str],
     container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
 ):
     service = await container.get(NotificationService)
-    await service.send_message(user_id=user_id, telegram_id=telegram_id, orders=orders)
+    await service.send_message(telegram_id=telegram_id, texts=texts)
 
 
 async def main() -> None:
