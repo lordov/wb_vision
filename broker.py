@@ -1,6 +1,7 @@
 from typing import Annotated
 from taskiq import Context, InMemoryBroker, TaskiqDepends, TaskiqEvents, TaskiqState
 from taskiq_nats import PullBasedJetStreamBroker, NATSObjectStoreResultBackend
+from nats.js.api import ConsumerConfig
 
 from bot.core.config import settings
 import asyncio
@@ -19,6 +20,11 @@ broker = PullBasedJetStreamBroker(
     settings.nats.url,
     stream_name="taskiq_jetstream",
     durable="wb_tasks",
+    consumer_config=ConsumerConfig(
+        # Сколько можем дожидаться ответа, уменьшить размер задач
+        ack_wait=60 * 5
+    ),
+
 ).with_result_backend(NATSObjectStoreResultBackend(settings.nats.url))
 # broker.add_middlewares(SimpleRetryMiddleware())
 # scheduler = TaskiqScheduler(broker, sources=[LabelScheduleSource(broker)])
@@ -95,8 +101,7 @@ async def notify_user_about_orders(
 async def main() -> None:
     try:
         await broker.startup()
-        task = await fetch_orders_for_all_keys.kiq()
-        api_keys = await task.wait_result(timeout=6000)
+        await fetch_orders_for_all_keys.kiq()
         await broker.shutdown()
     except (Exception, TimeoutError) as e:
         print(e)

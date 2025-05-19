@@ -113,55 +113,53 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
             return 0
 
     async def get_total_today(
-            self,
-            user_id: int,
-            order_id: int,
-            nm_id: int,
-            date: datetime.date, 
-            total_price: float = 0,
-
-    ) -> float:
+        self,
+        user_id: int,
+        order_id: int,
+        nm_id: int,
+        date: datetime,  # теперь точное время
+        total_price: float = 0,
+    ) -> str | int:
         try:
-            # Проверка, если total_pr равен 0
             if total_price == 0:
                 raise ValueError("Ответ от сервера отдал 0")
-            # Запрос для фильтрации по nmId и дате, подсчёта заказов и суммы
+
+            # Начало дня (2025-05-18 00:00:00)
+            start_of_day = datetime.combine(date.date(), datetime.min.time())
+
+            # Запрос по диапазону времени в течение дня
             stmt = (
                 select(
                     func.count().label("order_count"),
-                    func.sum(cast(OrdersWB.total_price, Numeric)
-                             * (1 - cast(OrdersWB.discount_percent, Numeric) / 100)).label("total_price")
+                    func.sum(OrdersWB.total_price * (1 - OrdersWB.discount_percent / 100)).label("total_price")
                 )
                 .where(
                     OrdersWB.user_id == user_id,
                     OrdersWB.nm_id == nm_id,
-                    OrdersWB.id <= order_id,
                     OrdersWB.is_cancel == False,
-                    cast(OrdersWB.date, Date) == date
+                    OrdersWB.date >= start_of_day,
+                    OrdersWB.date <= date
                 )
             )
-            # Выполнение запроса
+
             result = await self.session.execute(stmt)
-            order_count, total_price = result.fetchone()
+            order_count, db_total_price = result.fetchone()
 
-            # Если заказов нет, берём total_pr в качестве начальной цены
-            if order_count == 0:
-                order_count = 1
-                total_price = total_price
+            # Если заказов нет, используем переданный total_price
+            if order_count == 1 or db_total_price is None:
+                final_total = total_price
             else:
-                # Добавляем цену из параметра total_pr, если есть предыдущие заказы
-                total_price += total_price
+                final_total = db_total_price + total_price
 
-            # Формируем результат в виде строки, подумать надо просто знаениями
-            return f"{order_count} на {round(total_price)}"
+            return f"{order_count} на {round(final_total)}"
 
         except ValueError as ve:
             db_logger.warning(f"Warning: {ve}")
             return 0
         except (SQLAlchemyError, Exception) as e:
-            db_logger.error(f"Error in get_totals_today: {e}")
+            db_logger.error(f"Error in get_total_today: {e}")
             return 0
-
+        
     async def get_total_yesterday(
         self, order_id: int, user_id: int, nm_id: int, date: str) -> str:
         """

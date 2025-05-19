@@ -89,6 +89,6 @@ class WBService:
             order.counter = await uow.wb_orders.get_counter(user_id, order.id, order_date)
             order.amount = await uow.wb_orders.get_amount(user_id, order.id, order_date)
             order.total_today = await uow.wb_orders.get_total_today(
-                user_id, order.id, order.nm_id, order_date, total_price)
-            order.total_yesterday = await uow.wb_orders.get_total_yesterday(
+                user_id, order.id, order.nm_id, order.date, total_price)
+            order.total_yesterday = await uow.wb_orders.get_total_yesterday(order.id,
                 user_id, order.nm_id, order_date)
