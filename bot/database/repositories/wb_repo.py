@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from bot.core.logging import db_logger
 
-from bot.schemas.wb import OrderWBCreate, SalesWBCreate, StocksWBCreate
+from bot.schemas.wb import NotifOrder, OrderWBCreate, SalesWBCreate, StocksWBCreate
 from ..models import OrdersWB, StocksWB, SalesWB
 from ..repositories.base import SQLAlchemyRepository
 from .base import T
@@ -16,7 +16,7 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
     def __init__(self, session: AsyncSession, model: Type[T]):
         super().__init__(session, model)
 
-    async def add_orders_bulk(self, orders: list[OrderWBCreate]) -> list[OrderWBCreate]:
+    async def add_orders_bulk(self, orders: list[OrderWBCreate]) -> list[NotifOrder]:
         """Добавить заказы по одному для проверки."""
         db_logger.info("add_orders_bulk", count=len(orders))
         if not orders:
@@ -42,7 +42,7 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
             except SQLAlchemyError as e:
                 db_logger.error("Error in add_orders_bulk", error=str(e))
 
-        return[OrderWBCreate.model_validate(order) for order in new_orders]
+        return [NotifOrder.model_validate(order) for order in new_orders]
 
     async def add_sales_bulk(self, orders: list[SalesWBCreate]) -> None:
         """Добавить продажи пачкой"""
@@ -72,21 +72,26 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
         )
         await self.session.execute(stmt)
 
-    async def get_counter(self, user_id: int, date: datetime.date) -> int:
-        """Количество заказов за дату."""
+    async def get_counter(self, user_id: int, order_id: int, date: datetime.date) -> int:
+        """
+        Возвращает номер заказа по порядку в рамках дня (счётчик),
+        основываясь на id и дате (по полю OrdersWB.date).
+        """
         try:
             stmt = select(func.count()).where(
                 OrdersWB.user_id == user_id,
                 cast(OrdersWB.date, Date) == date,
-                OrdersWB.is_cancel.is_(False),
+                OrdersWB.id < order_id,
+                OrdersWB.is_cancel.is_(False)
             )
             result = await self.session.execute(stmt)
-            return result.scalar() or 0
+            count = result.scalar() or 0
+            return count + 1  # Текущий заказ — следующий по порядку
         except SQLAlchemyError as e:
-            db_logger.error("Error in get_counter", error=str(e))
-            return 0
+            db_logger.error("Error in get_order_day_counter", error=str(e))
+            return 1
 
-    async def get_amount(self, user_id: int, date: datetime.date) -> int:
+    async def get_amount(self, user_id: int, order_id: int, date: datetime.date) -> int:
         """Общая сумма заказов за дату (с учетом скидок)."""
         try:
             stmt = select(
@@ -97,6 +102,7 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
             ).where(
                 OrdersWB.user_id == user_id,
                 cast(OrdersWB.date, Date) == date,
+                OrdersWB.id < order_id,
                 OrdersWB.is_cancel.is_(False),
             )
             result = await self.session.execute(stmt)
@@ -106,7 +112,15 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
             db_logger.error("Error in get_amount", error=str(e))
             return 0
 
-    async def get_total_today(self, user_id: int, nm_id: int, date, total_price: float = 0) -> float:
+    async def get_total_today(
+            self,
+            user_id: int,
+            order_id: int,
+            nm_id: int,
+            date: datetime.date, 
+            total_price: float = 0,
+
+    ) -> float:
         try:
             # Проверка, если total_pr равен 0
             if total_price == 0:
@@ -121,6 +135,7 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
                 .where(
                     OrdersWB.user_id == user_id,
                     OrdersWB.nm_id == nm_id,
+                    OrdersWB.id <= order_id,
                     OrdersWB.is_cancel == False,
                     cast(OrdersWB.date, Date) == date
                 )
@@ -147,7 +162,8 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
             db_logger.error(f"Error in get_totals_today: {e}")
             return 0
 
-    async def get_total_yesterday(self, user_id: int, nm_id: int, date: str) -> str:
+    async def get_total_yesterday(
+        self, order_id: int, user_id: int, nm_id: int, date: str) -> str:
         """
         Получает количество заказов и общую сумму за указанный nmId и дату.
         """
@@ -166,6 +182,7 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
                     OrdersWB.user_id == user_id,
                     OrdersWB.nm_id == nm_id,
                     OrdersWB.is_cancel == False,
+                    OrdersWB.id < order_id,
                     cast(OrdersWB.date, Date) == date
                 )
             )

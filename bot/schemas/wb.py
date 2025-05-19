@@ -47,6 +47,12 @@ class OrderWBCreate(BaseModel):
         validate_by_name = True
         from_attributes = True
 
+class NotifOrder(OrderWBCreate):
+    id: int
+    counter: int | None = None
+    amount: int | None = None
+    total_today: int | None = None
+    total_yesterday: int | None = None
 
 class SalesWBCreate(BaseModel):
     date: datetime

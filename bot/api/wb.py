@@ -28,7 +28,7 @@ class WBAPIClient(BaseAPIClient):
     async def get_orders(
             self,
             user_id: int,
-            date_from: str = '2025-05-15'
+            date_from: str = '2025-05-19'
     ) -> list[OrderWBCreate]:
         """
         Получение данных о заказах начиная с указанной даты.
