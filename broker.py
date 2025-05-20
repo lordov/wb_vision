@@ -1,5 +1,5 @@
 from typing import Annotated
-from taskiq import Context, InMemoryBroker, TaskiqDepends, TaskiqEvents, TaskiqState
+from taskiq import Context, TaskiqDepends, TaskiqEvents, TaskiqState
 from taskiq_nats import PullBasedJetStreamBroker, NATSObjectStoreResultBackend
 from nats.js.api import ConsumerConfig
 
@@ -8,7 +8,6 @@ import asyncio
 
 from bot.core.dependency.container import DependencyContainer
 from bot.core.dependency.container_init import init_container
-from bot.schemas.wb import OrderWBCreate
 from bot.services.api_key import ApiKeyService
 from bot.services.notifications import NotificationService
 from bot.services.wb_service import WBService

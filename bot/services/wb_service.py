@@ -86,9 +86,7 @@ class WBService:
             total_price = round(order.total_price *
                                 (1 - order.discount_percent / 100))
 
-            order.counter = await uow.wb_orders.get_counter(user_id, order.id, order_date)
-            order.amount = await uow.wb_orders.get_amount(user_id, order.id, order_date)
-            order.total_today = await uow.wb_orders.get_total_today(
+            order.counter, order.amount = await uow.wb_orders.counter_and_amount(user_id, order.id, order_date)
+
+            order.total_today, order.total_yesterday = await uow.wb_orders.get_totals_combined(
                 user_id, order.id, order.nm_id, order.date, total_price)
-            order.total_yesterday = await uow.wb_orders.get_total_yesterday(order.id,
-                user_id, order.nm_id, order_date)
