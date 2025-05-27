@@ -13,7 +13,7 @@ user_limiters: dict[int, AsyncLimiter] = {}
 
 def get_user_limiter(user_id: int) -> AsyncLimiter:
     if user_id not in user_limiters:
-        # 1 message per second
+        # 1 message per 5 second
         user_limiters[user_id] = AsyncLimiter(1, 5)
     return user_limiters[user_id]
 
@@ -49,7 +49,3 @@ class NotificationService:
             except Exception as e:
                 print(e)
 
-    async def _get_photo(self, nm_id: int):
-        "Находим фотку на вб"
-        url = f"https://basket-12.wbbasket.ru/vol1711/part171150/171150581/images/c516x688/1.webp"
-        return url

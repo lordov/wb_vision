@@ -1,8 +1,7 @@
-import asyncio
 from fluentogram import TranslatorHub
 
 from bot.api.wb import WBAPIClient
-from bot.schemas.wb import NotifOrder
+from bot.schemas.wb import NotifOrder, OrderWBCreate
 from bot.services.api_key import ApiKeyService
 from bot.database.uow import UnitOfWork
 from bot.core.logging import app_logger
@@ -32,7 +31,8 @@ class WBService:
         async with self.uow as uow:
             new_orders = await self.uow.wb_orders.add_orders_bulk(orders=orders)
             await self.uow.commit()
-            app_logger.info(f"New orders added for {user_id}")
+            app_logger.info(
+                f"{len(new_orders)} new orders added for {user_id} ")
 
             if not new_orders:
                 app_logger.info(f"No new orders for {user_id}")
@@ -90,3 +90,8 @@ class WBService:
 
             order.total_today, order.total_yesterday = await uow.wb_orders.get_totals_combined(
                 user_id, order.id, order.nm_id, order.date, total_price)
+
+    async def _get_photo(self, nm_id: int):
+        "Находим фотку на вб"
+        url = f"https://basket-12.wbbasket.ru/vol1711/part171150/171150581/images/c516x688/1.webp"
+        return url

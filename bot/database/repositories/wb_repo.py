@@ -1,6 +1,7 @@
+from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Type
-from sqlalchemy import Date, Numeric, cast, func, literal_column, select
+from typing import Optional, Type
+from sqlalchemy import Date, Numeric, cast, func, literal_column, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -289,3 +290,80 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
         except (SQLAlchemyError, Exception) as e:
             db_logger.error(f"Error in get_totals_combined: {e}")
             return 0, 0
+
+    async def stock_stats(self, nm_id: str) -> Optional[str]:
+        """
+        Получает количество единиц товара на каждом складе по артикулу товара (nmId).
+        """
+        try:
+            # Получаем последнюю дату изменения для данного nmId
+            stmt = select(func.max(StocksWB.last_сhange_date)
+                          ).where(StocksWB.nm_id == nm_id)
+            result = await self.session.execute(stmt)
+            last_change_date = result.scalar()
+
+            if not last_change_date:
+                return f"Остаток для {nm_id}: 0"
+
+            # Получаем остаток товара на складах на последнюю дату импорта
+            stmt = (
+                select(StocksWB.warehouse_name, StocksWB.quantity)
+                .where(
+                    (
+                        StocksWB.nm_id == nm_id,
+                        StocksWB.quantity != 0,
+                        StocksWB.import_date == select(
+                            func.max(StocksWB.import_date))
+                        .where((StocksWB.nm_id == nm_id, StocksWB.quantity != 0)).scalar_subquery()
+                    )
+                )
+            )
+            results = await self.session.execute(stmt)
+            stock_data = results.fetchall()
+
+            if not stock_data:
+                return f"Остаток для {nm_id}: 0"
+
+            # Получаем общее количество по артикулу на последнюю дату импорта
+            stmt = select(func.sum(StocksWB.quantity)).where(
+                StocksWB.nm_id == nm_id,
+                StocksWB.import_date == select(
+                    func.max(StocksWB.ImportDate))
+                .where((StocksWB.nm_id == nm_id, StocksWB.quantity != 0)).scalar_subquery()
+            )
+            result = await self.session.execute(stmt)
+            total_quantity = result.scalar() or 0
+
+            # Получаем количество заказов за последние 30 дней
+            stmt = select(func.count()).where(
+                (
+                    OrdersWB.nm_id == nm_id,
+                    OrdersWB.date >= func.date_sub(
+                        func.now(), text("INTERVAL 30 DAY"))
+                )
+            )
+            result = await self.session.execute(stmt)
+            monthly_order_count = result.scalar() or 0
+
+            # Рассчитываем скорость заказов
+            order_speed = monthly_order_count / 30 if monthly_order_count else 0
+            stock_ratio = round(float(total_quantity) /
+                                order_speed) if order_speed > 0 else 0
+
+            # Группируем количество по складам
+            warehouse_totals = defaultdict(int)
+            for warehouse, quantity in stock_data:
+                warehouse_totals[warehouse] += quantity
+
+            # Формируем текст
+            output = f'Дата обновления: {last_change_date.strftime("%Y-%m-%d")}\n'
+            for warehouse, quantity in warehouse_totals.items():
+                output += f"📦 {warehouse} – {quantity} шт.\n"
+
+            output += f'\n📦 Всего: {total_quantity} шт. Хватит на {stock_ratio} дн.'
+            return output
+
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            db_logger.error(f"Error in stock_stats: {e}")
+            return None
