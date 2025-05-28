@@ -1,4 +1,3 @@
-import asyncio
 from fluentogram import TranslatorHub
 
 from bot.api.wb import WBAPIClient
@@ -7,6 +6,13 @@ from bot.services.api_key import ApiKeyService
 from bot.database.uow import UnitOfWork
 from bot.core.logging import app_logger
 from ..services.notifications import NotificationService
+
+
+BASKET_THRESHOLDS = [
+    143, 287, 431, 719, 1007, 1061, 1115, 1169, 1313, 1601,
+    1655, 1919, 2045, 2189, 2405, 2621, 2837, 3053, 3269,
+    3485, 3701, 3917, 4133, 4349, 4565
+]
 
 
 class WBService:
@@ -32,7 +38,8 @@ class WBService:
         async with self.uow as uow:
             new_orders = await self.uow.wb_orders.add_orders_bulk(orders=orders)
             await self.uow.commit()
-            app_logger.info(f"New orders added for {user_id}")
+            app_logger.info(
+                f"{len(new_orders)} new orders added for {user_id} ")
 
             if not new_orders:
                 app_logger.info(f"No new orders for {user_id}")
@@ -47,16 +54,15 @@ class WBService:
 
         return texts
 
-    async def _generate_texts(self, orders: list[NotifOrder]) -> list[str]:
-        texts = []
+    async def _generate_texts(self, orders: list[NotifOrder]) -> list[dict]:
+        result = []
 
         for order in orders:
-            total_price = round(order.total_price *
-                                (1 - order.discount_percent / 100))
+            total_price = round(order.total_price * (1 - order.discount_percent / 100))
 
             text = self.i18n.get(
                 "order-text",
-                date=order.date.strftime("%Y-%m-%d"),
+                date=order.date.strftime("%Y-%m-%d %H:%M"),
                 counter=order.counter,
                 total_price=total_price,
                 amount=order.amount,
@@ -71,9 +77,18 @@ class WBService:
                 warehouse_text='чюпеп',
             )
             clean_text = await self._clean_text(text)
-            texts.append(clean_text)
 
-        return texts
+            photo = await self._get_photo(order.nm_id)
+
+            # Создаем словарь с текстом и фото
+            order_data = {
+                "text": clean_text,
+                "photo": photo  # может быть None, если фото нет
+            }
+
+            result.append(order_data)
+
+        return result
 
     async def _clean_text(self, text: str) -> str:
         # Удаляем управляющие символы \u2068 (LRI) и \u2069 (PDI). Для переменных Fluenta
@@ -90,3 +105,32 @@ class WBService:
 
             order.total_today, order.total_yesterday = await uow.wb_orders.get_totals_combined(
                 user_id, order.id, order.nm_id, order.date, total_price)
+
+    async def _get_photo(self, nm_id: int):
+        photo_url = await self._get_working_photo_url(nm_id)
+        if photo_url is None:
+            app_logger.info(f"Photo not found for {nm_id}")
+            return None
+        return photo_url
+
+    async def _get_working_photo_url(self, nm_id: int) -> str:
+        api_client = WBAPIClient()
+        estimated = int(await self._get_estimated_basket(nm_id))
+
+        for basket in range(estimated, 31):  # Проверяем с "предположенного" до 30
+            url = await self._build_url(nm_id, f"{basket:02}")
+            response = await api_client.head_request(url)
+            if response:
+                return url
+        return None
+
+    async def _get_estimated_basket(self, nm_id: int) -> str:
+        s = nm_id // 100000
+        for i, max_val in enumerate(BASKET_THRESHOLDS, start=1):
+            if s <= max_val:
+                return f"{i:02}"
+        return "26"
+
+    async def _build_url(self, nm_id: int, basket: str) -> str:
+        short_id = nm_id // 100000
+        return f"https://basket-{basket}.wbbasket.ru/vol{short_id}/part{nm_id // 1000}/{nm_id}/images/big/1.webp"

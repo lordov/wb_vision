@@ -13,7 +13,7 @@ user_limiters: dict[int, AsyncLimiter] = {}
 
 def get_user_limiter(user_id: int) -> AsyncLimiter:
     if user_id not in user_limiters:
-        # 1 message per second
+        # 1 message per 5 second
         user_limiters[user_id] = AsyncLimiter(1, 5)
     return user_limiters[user_id]
 
@@ -32,7 +32,7 @@ class NotificationService:
     async def send_message(
             self,
             telegram_id: int,
-            texts: list[str],
+            texts: list[dict],
     ) -> None:
         limiter = get_user_limiter(telegram_id)
         for text in texts:
@@ -41,15 +41,11 @@ class NotificationService:
                 async with limiter:
                     await self.bot.send_photo(
                         chat_id=telegram_id,
-                        photo=f"https://basket-12.wbbasket.ru/vol1711/part171150/171150581/images/c516x688/1.webp",
-                        caption=text, parse_mode="HTML"
+                        photo=text.get('photo'),
+                        caption=text.get('text'), parse_mode="HTML"
                     )
             except TelegramForbiddenError:
                 ...
             except Exception as e:
                 print(e)
 
-    async def _get_photo(self, nm_id: int):
-        "Находим фотку на вб"
-        url = f"https://basket-12.wbbasket.ru/vol1711/part171150/171150581/images/c516x688/1.webp"
-        return url
