@@ -58,15 +58,14 @@ async def add_one(
 @broker.task
 async def start_notif_pipline(container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]) -> None:
     service = await container.get(ApiKeyService)
-    async with await container.create_uow():
-        api_keys = await service.get_all_decrypted_keys()
-        for key in api_keys:
-            await fetch_and_save_orders_for_key.kiq(
-                user_id=key.user_id,
-                api_key=key.key_encrypted,
-                telegram_id=key.telegram_id,
-            )
-        app_logger.info(f'Задача о заказах отправлена', user_id=key.user_id)
+    api_keys = await service.get_all_decrypted_keys()
+    for key in api_keys:
+        await fetch_and_save_orders_for_key.kiq(
+            user_id=key.user_id,
+            api_key=key.key_encrypted,
+            telegram_id=key.telegram_id,
+        )
+    app_logger.info(f'Задача о заказах отправлена', user_id=key.user_id)
 
 
 @broker.task
@@ -76,21 +75,20 @@ async def fetch_and_save_orders_for_key(
     api_key: str,
     container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
 ):
-    async with await container.create_uow():
-        service = await container.get(WBService)
-        texts = await service.fetch_and_save_orders(api_key=api_key, user_id=user_id)
-        if not texts:
-            app_logger.info(f'Cancel task for {user_id}')
-            return
+    service = await container.get(WBService)
+    texts = await service.fetch_and_save_orders(api_key=api_key, user_id=user_id)
+    if not texts:
+        app_logger.info(f'Cancel task for {user_id}')
+        return
 
-        if texts:
-            await notify_user_about_orders.kiq(telegram_id, texts)
+    if texts:
+        await notify_user_about_orders.kiq(telegram_id, texts)
 
 
 @broker.task()
 async def notify_user_about_orders(
     telegram_id: int,
-    texts: list[str],
+    texts: list[dict],
     container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
 ):
     service = await container.get(NotificationService)

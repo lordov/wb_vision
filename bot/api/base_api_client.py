@@ -28,12 +28,14 @@ class BaseAPIClient:
     def __init__(
         self,
         # auth_strategy: AuthStrategy,
-        token: str,
+        token: str | None = None,
         cache_ttl: int = 3600
     ):
         # self.auth_strategy = auth_strategy
         self.token = token
         self.cache = TTLCache(maxsize=1000, ttl=cache_ttl)
+        self.auth_headers = {
+            "Authorization": f"{decrypt_api_key(self.token)}"} if token else None
 
         # Логгеры
         self.api_logger = api_logger
@@ -138,15 +140,13 @@ class BaseAPIClient:
         """
         retries = 0
         # Заголовки из стратегии
-        auth_headers = {
-            "Authorization": f"{decrypt_api_key(self.token)}"}
         caller = inspect.stack()[1].function
         while retries <= max_retries:
             async with aiohttp.ClientSession() as session:
                 try:
                     start_time = time.time()
                     async with session.request(
-                            method, url, params=params, json=json, headers=headers or auth_headers) as response:
+                            method, url, params=params, json=json, headers=headers or self.auth_headers) as response:
                         duration = time.time() - start_time
                         response.raise_for_status()
                         if response.status == 200:
@@ -192,3 +192,9 @@ class BaseAPIClient:
                 if resp.status != 200:
                     return None
                 return await resp.read()
+
+    async def head_request(self, url: str) -> bool:
+        async with aiohttp.ClientSession() as session:
+            resp = await session.head(url)
+            if resp.status == 200:
+                return True
