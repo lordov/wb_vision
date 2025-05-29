@@ -107,10 +107,6 @@ async def main():
     # Set up the bot with the provided token and default properties
     bot: Bot = await setup_bot(dp)
 
-    # Подключаемся к Nats и получаем ссылки на клиент и JetStream-контекст
-
-    # nc, js = await connect_to_nats(servers=settings.nats_url)
-
     try:
         await bot.send_message(settings.bot.admin_id, f'Бот запущен.')
     except Exception as e:
@@ -121,7 +117,6 @@ async def main():
         await asyncio.gather(
             dp.start_polling(
                 bot,
-                # js=js,
                 _translator_hub=translator_hub
             ),
         )

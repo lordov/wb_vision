@@ -27,6 +27,8 @@ class User(Base):
     subscriptions: Mapped[list["Subscription"]
                           ] = relationship(back_populates="user")
     employees: Mapped[list["Employee"]] = relationship(back_populates="owner")
+    employee_invites: Mapped[list["EmployeeInvite"]
+                             ] = relationship(back_populates="owner")
     payments: Mapped[list["Payment"]] = relationship(back_populates="user")
     orders: Mapped[list["OrdersWB"]] = relationship(back_populates="user")
 
@@ -72,10 +74,22 @@ class Employee(Base):
     owner_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id"), index=True)
     telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
-    full_name: Mapped[str] = mapped_column(String(255))
+    username: Mapped[str] = mapped_column(
+        String(255), nullable=True, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     owner: Mapped["User"] = relationship(back_populates="employees")
+
+
+class EmployeeInvite(Base):
+    __tablename__ = "employee_invites"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    token: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    owner_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
+    is_used: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    owner: Mapped["User"] = relationship(back_populates="employee_invites")
 
 
 class Payment(Base):
@@ -106,7 +120,8 @@ class OrdersWB(Base):
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
-    date: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    date: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, index=True)
     last_change_date: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, index=True)
     supplier_article: Mapped[str] = mapped_column(String(75), nullable=False)
@@ -151,7 +166,7 @@ class OrdersWB(Base):
     user: Mapped["User"] = relationship(back_populates="orders")
 
     __table_args__ = (UniqueConstraint(
-        'date', 'user_id', 'srid', 'nm_id', 'is_cancel', 'tech_size', 
+        'date', 'user_id', 'srid', 'nm_id', 'is_cancel', 'tech_size',
         name='unique_order'),)
 
 
@@ -160,7 +175,8 @@ class SalesWB(Base):
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
-    date: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    date: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, index=True)
     last_change_date: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, index=True)
     warehouse_name: Mapped[str] = mapped_column(String(255), nullable=False)

@@ -7,10 +7,12 @@ from .repositories.base import SQLAlchemyRepository
 from .repositories.user import UserRepository
 from .repositories.subscription import SubscriptionRepository
 from .repositories.api_key import WbApiKeyRepository
+from .repositories.employee import EmployeeRepository
 from .models import (
-    OrdersWB, Payment, Employee,
+    EmployeeInvite, OrdersWB, Payment, Employee,
     SalesWB, StocksWB
 )
+from bot.core.logging import db_logger
 
 
 class UnitOfWork:
@@ -22,9 +24,10 @@ class UnitOfWork:
         self.wb_orders = WBRepository(session, OrdersWB)
         self.wb_sales = WBRepository(session, SalesWB)
         self.wb_stocks = WBRepository(session, StocksWB)
+        self.employees = EmployeeRepository(session, Employee)
+        self.employee_invites = EmployeeRepository(session, EmployeeInvite)
 
         self.payments = SQLAlchemyRepository[Payment](session, Payment)
-        self.employees = SQLAlchemyRepository[Employee](session, Employee)
 
     async def commit(self):
         await self.session.commit()
@@ -42,7 +45,7 @@ class UnitOfWork:
     async def __aexit__(self, exc_type, exc, tb):
         """Выход из контекстного менеджера. Закрываем сессию."""
         await self.session.close()
-        print('сессия закрыта')
+        db_logger.info('сессия закрыта')
 
 
 @asynccontextmanager

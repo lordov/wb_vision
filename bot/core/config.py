@@ -25,6 +25,7 @@ class NatsSettings(BaseSettings):
 class BotSettings(BaseSettings):
     token: SecretStr
     admin_id: int
+    username: str
     locale_path: str = "./locales"
 
 

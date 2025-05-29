@@ -1,7 +1,6 @@
 from aiogram import Bot, Router
-from aiogram import F
 from aiogram.fsm.context import FSMContext
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandStart, CommandObject
 from aiogram.types import Message, BotCommand
 
 from aiogram_dialog import DialogManager, StartMode
@@ -9,9 +8,9 @@ from aiogram_dialog import DialogManager, StartMode
 from fluentogram import TranslatorRunner
 
 from bot.core.dependency.container import DependencyContainer
-from bot.database.uow import UnitOfWork
 from bot.services.api_key import ApiKeyService
 from bot.services.notifications import NotificationService
+from bot.services.users import UserService
 from bot.services.wb_service import WBService
 from .states import UserPanel, Support
 from bot.core.config import settings
@@ -34,18 +33,59 @@ async def on_startup(bot: Bot):
     await bot.set_my_commands(commands)
 
 
+@router.message(CommandStart(deep_link=True))
+async def start_with_deeplink(
+    message: Message,
+    i18n: TranslatorRunner,
+    command: CommandObject,
+    container: DependencyContainer
+):
+    user_service = await container.get(UserService)
+    await user_service.add_user(
+        telegram_id=message.from_user.id,
+        username=message.from_user.username,
+        locale=message.from_user.language_code
+    )
+    if command.args and command.args.startswith("addstaff_"):
+
+        parts = command.args.split("_")
+        if len(parts) != 3:
+            await message.answer("Неверная ссылка.")
+            return
+
+        owner_id, token = int(parts[1]), parts[2]
+
+        # Проверка ссылки
+        if await user_service.check_invite(owner_id, token):
+            await message.answer("Ссылка недействительна или устарела.")
+            return
+
+        # Проверка: не был ли уже добавлен сотрудник
+        if await user_service.check_user_as_employee(message.from_user.id):
+            await message.answer("Вы уже добавлены как сотрудник.")
+            return
+
+        # Добавление сотрудника
+        await user_service.add_employee(message.from_user.id, owner_id, token)
+        await message.answer("Вы успешно добавлены как сотрудник!")
+
+    else:
+        await message.answer(i18n.get('hello-message'))
+
+
 @router.message(CommandStart())
 async def cmd_start(
     message: Message,
-    uow: UnitOfWork,
     i18n: TranslatorRunner,
+    container: DependencyContainer,
 ):
-    await uow.users.get_or_create(
-        message.from_user.id,
-        message.from_user.username,
-        message.from_user.language_code
-    )
-    await message.answer(i18n.get('hello-message'))
+    async with await container.create_uow() as uow:
+        await uow.users.get_or_create(
+            message.from_user.id,
+            message.from_user.username,
+            message.from_user.language_code
+        )
+        await message.answer(i18n.get('hello-message'))
 
 
 @router.message(Command('lk'))

@@ -8,6 +8,7 @@ from bot.database.uow import UnitOfWork
 from bot.services.api_key import ApiKeyService
 from bot.services.subscription import SubscriptionService
 from bot.services.notifications import NotificationService
+from bot.services.users import UserService
 from bot.services.wb_service import WBService
 
 T = TypeVar("T")
@@ -69,5 +70,9 @@ class DependencyContainer:
                 notification_service=notification_service,
                 api_key_service=api_key_service,
             )
+
+        elif service_type is UserService:
+            uow = await self.create_uow()
+            return UserService(uow=uow)
 
         raise ValueError(f"Unknown service: {service_type}")
