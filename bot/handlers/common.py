@@ -40,34 +40,41 @@ async def start_with_deeplink(
     command: CommandObject,
     container: DependencyContainer
 ):
+    bot = message.bot
     user_service = await container.get(UserService)
+    username = message.from_user.username
     await user_service.add_user(
         telegram_id=message.from_user.id,
-        username=message.from_user.username,
+        username=username if username else None,
         locale=message.from_user.language_code
     )
     if command.args and command.args.startswith("addstaff_"):
 
         parts = command.args.split("_")
         if len(parts) != 3:
-            await message.answer("Неверная ссылка.")
             return
 
         owner_id, token = int(parts[1]), parts[2]
+        inviate = await user_service.check_invite(owner_id, token)
+        owner = await user_service.get_by_user_id(owner_id)
 
-        # Проверка ссылки
-        if await user_service.check_invite(owner_id, token):
-            await message.answer("Ссылка недействительна или устарела.")
+        if owner.id == message.from_user.id:
+            await message.answer(i18n.get("self-error"))
+            return
+        
+        if inviate is None:
+            await message.answer(i18n.get("wrong-link"))
             return
 
         # Проверка: не был ли уже добавлен сотрудник
         if await user_service.check_user_as_employee(message.from_user.id):
-            await message.answer("Вы уже добавлены как сотрудник.")
+            await message.answer(i18n.get("employee-exist"))
             return
 
         # Добавление сотрудника
-        await user_service.add_employee(message.from_user.id, owner_id, token)
-        await message.answer("Вы успешно добавлены как сотрудник!")
+        await user_service.add_employee(owner_id, message.from_user.id, username, token)
+        await message.answer(i18n.get("employee-added"))
+        await bot.send_message(owner.telegram_id, i18n.get("notif-owner", user_id=message.from_user.id))
 
     else:
         await message.answer(i18n.get('hello-message'))
@@ -80,7 +87,7 @@ async def cmd_start(
     container: DependencyContainer,
 ):
     async with await container.create_uow() as uow:
-        await uow.users.get_or_create(
+        await uow.users.add_user(
             message.from_user.id,
             message.from_user.username,
             message.from_user.language_code

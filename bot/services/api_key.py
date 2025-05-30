@@ -20,7 +20,7 @@ class ApiKeyService:
         self.fernet = fernet
 
     async def get_user_key(self, telegram_id: int, title: str) -> ApiKey | None:
-        user = await self.user_repo.get_by_telegram_id(telegram_id)
+        user = await self.user_repo.get_by_user_id(telegram_id)
         if not user:
             raise ValueError("User not found")
         app_logger.info("Fetching API key titles",
@@ -29,7 +29,7 @@ class ApiKeyService:
         return key
 
     async def get_decrypted_by_title(self, telegram_id: int, title: str) -> str | None:
-        user = await self.user_repo.get_by_telegram_id(telegram_id)
+        user = await self.user_repo.get_by_user_id(telegram_id)
         if not user:
             raise ValueError("User not found")
 
@@ -53,7 +53,7 @@ class ApiKeyService:
         return keys
 
     async def add_encrypt_key(self, telegram_id: int, raw_key: str, title: str = "API Key") -> ApiKey:
-        user = await self.user_repo.get_by_telegram_id(telegram_id)
+        user = await self.user_repo.get_by_user_id(telegram_id)
         if not user:
             raise ValueError("User not found")
         app_logger.info("Encrypting and adding API key",
@@ -80,7 +80,7 @@ class ApiKeyService:
         await self.repo.upsert_key(user_id, title, encrypted, is_active=is_active)
 
     async def disable_key(self, telegram_id: int):
-        user = await self.user_repo.get_by_telegram_id(telegram_id)
+        user = await self.user_repo.get_by_user_id(telegram_id)
         if not user:
             raise ValueError("User not found")
         await self.repo.deactivate_user_keys(user.id)
@@ -116,7 +116,7 @@ class ApiKeyService:
         - is_active: bool — активен ли ключ.
         - status: str — один из: "active", "trial_activated", "inactive".
         """
-        user = await self.user_repo.get_by_telegram_id(telegram_id)
+        user = await self.user_repo.get_by_user_id(telegram_id)
         if not user:
             raise ValueError("User not found")
         # Проверка на активную подписку

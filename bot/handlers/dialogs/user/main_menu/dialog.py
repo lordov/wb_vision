@@ -8,7 +8,7 @@ from aiogram_dialog.widgets.kbd import (
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.input import MessageInput
 
-from bot.handlers.states import UserPanel, ApiPanel
+from bot.handlers.states import UserPanel, ApiPanel, Employee
 from .getters import donate_getter, lk_start
 
 
@@ -16,6 +16,14 @@ user_panel = Dialog(
     Window(
         Format('{lk_start}'),
         Group(
+            Column(
+                Start(
+                    Format('{lk_settings}'),
+                    id='lk_settings',
+                    state=UserPanel.settings,
+                    mode=StartMode.NORMAL
+                )
+            ),
             Column(
                 Start(
                     Format('{lk_api_key}'),
@@ -26,10 +34,9 @@ user_panel = Dialog(
             ),
             Column(
                 Start(
-                    Format('{lk_settings}'),
-                    id='lk_settings',
-                    state=UserPanel.settings,
-                    mode=StartMode.NORMAL
+                    Format('{lk_emlpoyee_btn}'),
+                    id='employee',
+                    state=Employee.start,
                 )
             ),
             Column(

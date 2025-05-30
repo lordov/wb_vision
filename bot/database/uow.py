@@ -24,7 +24,7 @@ class UnitOfWork:
         self.wb_orders = WBRepository(session, OrdersWB)
         self.wb_sales = WBRepository(session, SalesWB)
         self.wb_stocks = WBRepository(session, StocksWB)
-        self.employees = EmployeeRepository(session, Employee)
+        self.employee = EmployeeRepository(session, Employee)
         self.employee_invites = EmployeeRepository(session, EmployeeInvite)
 
         self.payments = SQLAlchemyRepository[Payment](session, Payment)

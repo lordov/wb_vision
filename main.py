@@ -19,6 +19,7 @@ from bot.core.dependency.container import DependencyContainer
 from bot.core.logging import setup_logging, app_logger
 from bot.handlers.dialogs.user.main_menu.dialog import user_panel
 from bot.handlers.dialogs.user.api_connect.dialog import api_connect
+from bot.handlers.dialogs.user.employee.dialog import employee
 # from tgbot.dialogs.broadcast_dialog import broadcast_dialog
 
 from bot.database.engine import async_session_maker, engine
@@ -87,7 +88,7 @@ async def setup_bot(dp: Dispatcher) -> Bot:
     )
 
     dp.include_routers(*get_routers())
-    dp.include_routers(user_panel, api_connect)
+    dp.include_routers(user_panel, api_connect, employee)
 
     setup_dialogs(dp)
 

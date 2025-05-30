@@ -9,10 +9,18 @@ class UserPanel(StatesGroup):
     subscription = State()
     employee = State()
 
+
 class Support(StatesGroup):
     question = State()
+
 
 class ApiPanel(StatesGroup):
     start = State()
     input = State()
     deactivate = State()
+
+
+class Employee(StatesGroup):
+    start = State()
+    link = State()
+    delete = State()
