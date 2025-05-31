@@ -110,13 +110,13 @@ add-employee-text = 🧑🏻‍💼 Добавление сотрудника
 
     ℹ️ Ссылка действительна 3 часа.
 
-delete-employee-text = 🧑🏻‍💼 Сотрудники ({$Count})
+delete-employee-text = 🧑🏻‍💼 Сотрудники ({$count})
 
 lk-emlpoyee-btn = 🧑🏼‍💻 Добавить сотрудника
 
 add-employee-btn = +Добавить сотрудника
 
-delete-employee-btn = Удалить сотрудников
+delete-employee-btn = -Удалить сотрудников
 
 employee-deleted = Сотрудник удален
 

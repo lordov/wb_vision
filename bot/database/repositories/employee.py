@@ -135,9 +135,9 @@ class EmployeeRepository(SQLAlchemyRepository[Employee]):
                 "employee.fetching.failed", owner_id=owner_id, error=str(e))
         return employeers
 
-    async def deactivate_employee(self, owner_id: int, telegram_id: int) -> None:
+    async def deactivate_employee(self, owner_id: int, employee_id: int) -> None:
         stmt = select(Employee).where(
-            Employee.telegram_id == telegram_id,
+            Employee.id == employee_id,
             Employee.owner_id == owner_id
         )
         try:
@@ -148,4 +148,4 @@ class EmployeeRepository(SQLAlchemyRepository[Employee]):
                 "employee.deactivate.failed", owner_id=owner_id, error=str(e))
         employee.is_active = False
         db_logger.info(
-            "employee.deactivated", owner_id=owner_id, telegram_id=telegram_id)
+            "employee.deactivated", owner_id=owner_id, employee_id=employee_id)

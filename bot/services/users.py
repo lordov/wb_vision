@@ -21,7 +21,7 @@ class UserService:
     async def generate_employee_invite(self, telegram_id: int) -> str:
         async with self.uow as uow:
             token = secrets.token_hex(16)
-            owner = await self.repo_users.get_by_user_id(telegram_id)
+            owner = await self.repo_users.get_by_tg_id(telegram_id)
             invate = await self.employee_invite.add_invite(token, owner.id)
 
             if not invate:
@@ -54,10 +54,13 @@ class UserService:
     async def add_user(self, telegram_id: int, username: str, locale: str = "ru") -> User | None:
         return await self.repo_users.add_user(telegram_id, username, locale)
 
-    async def get_active_employees(self, owner_id: int) -> list[Employee] | None:
-        return await self.employee.get_owners_employees(owner_id)
+    async def get_active_employees(self, telegram_id: int) -> list[Employee] | None:
+        owner = await self.repo_users.get_by_tg_id(telegram_id)
+        return await self.employee.get_owners_employees(owner.id)
 
-    async def delete_employee(self, owner_id: int, telegram_id: int) -> None:
-        await self.employee.deactivate_employee(owner_id, telegram_id)
+    async def delete_employee(self, telegram_id: int, employee_id: int) -> None:
+        owner = await self.repo_users.get_by_tg_id(telegram_id)
+        await self.employee.deactivate_employee(owner.id, employee_id)
+        await self.uow.commit()
         app_logger.info(
-            "employee.deactivated", owner_id=owner_id, telegram_id=telegram_id)
+            "employee.deactivated", owner_id=owner.id, employee_id=employee_id)

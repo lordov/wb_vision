@@ -17,7 +17,7 @@ async def lk_start(
     **kwargs
 ) -> dict:
     uow: UnitOfWork = dialog_manager.middleware_data.get('uow')
-    user: User = await uow.users.get_by_user_id(event_from_user.id)
+    user: User = await uow.users.get_by_tg_id(event_from_user.id)
     return {
         'lk_start': i18n.get('lk-start', id=user.id),
         'lk_settings': i18n.get('lk-settings-btn'),

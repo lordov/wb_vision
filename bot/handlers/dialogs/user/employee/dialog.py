@@ -10,7 +10,7 @@ from aiogram_dialog.widgets.input import MessageInput
 
 from bot.handlers.states import Employee
 from .getters import employee_delete, employee_link, employee_start
-from .callback import delete_employee
+from .callback import delete_employee_clbc
 
 employee = Dialog(
     Window(
@@ -19,6 +19,7 @@ employee = Dialog(
             Next(
                 Format('{add_btn}'),
                 id='next',
+                when='can_add_employee'
             ),
         ),
         SwitchTo(
@@ -48,15 +49,16 @@ employee = Dialog(
     Window(
         Format('{delete_employee_text}'),
         Select(
-            Format("{item[0]}"),  # отображаем имя сотрудника
+            Format("Удалить {item[0]}"),
             id="employee_select",
-            item_id_getter=lambda item: item[1],  # берем id сотрудника
-            items="employees",  # имя переменной из геттера
-            on_click=delete_employee,  # обработчик удаления
+            item_id_getter=lambda item: item[1],
+            items="employees",
+            on_click=delete_employee_clbc,
         ),
-        Back(
+        SwitchTo(
             Format('{back}'),
             id='back',
+            state=Employee.start
         ),
         getter=employee_delete,
         state=Employee.delete
