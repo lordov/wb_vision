@@ -1,4 +1,4 @@
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -24,10 +24,10 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
     async def get_active_by_user(self, user_id: int, title: str) -> ApiKey | None:
         """Получить один активный ключ (если нужен один по умолчанию)."""
         stmt = select(ApiKey).where(
-            ApiKey.user_id == user_id, 
+            ApiKey.user_id == user_id,
             ApiKey.is_active,
             ApiKey.title == title,
-            )
+        )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -41,10 +41,9 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def deactivate_user_keys(self, user_id: int):
-        """Деактивировать все ключи пользователя."""
-        stmt = update(ApiKey).where(ApiKey.user_id ==
-                                    user_id).values(is_active=False)
+    async def delete_user_keys(self, user_id: int):
+        """Удалить все ключи пользователя."""
+        stmt = delete(ApiKey).where(ApiKey.user_id == user_id)
         await self.session.execute(stmt)
 
     async def add_key(self, user_id: int, key: str, title: str = "API Key") -> ApiKey:
@@ -100,7 +99,7 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
                 ))
         except SQLAlchemyError as e:
             raise e
-    
+
     async def get_all_keys(self) -> list[ApiKeyWithTelegramDTO]:
         stmt = select(ApiKey).options(joinedload(ApiKey.user))
         try:
@@ -115,7 +114,8 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
                 id=key.id,
                 user_id=key.user_id,
                 title=key.title,
-                key_encrypted=key.key_encrypted,  # Предполагается, что ты уже умеешь расшифровывать
+                # Предполагается, что ты уже умеешь расшифровывать
+                key_encrypted=key.key_encrypted,
                 is_active=key.is_active,
                 telegram_id=key.user.telegram_id if key.user else None,
             )

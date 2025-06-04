@@ -15,20 +15,16 @@ from redis.exceptions import ConnectionError
 from bot.core.config import settings
 from bot.core.dependency.container_init import init_container
 from bot.core.dependency.container import DependencyContainer
-# from tgbot.dialogs.admin_dialog import admin_panel
 from bot.core.logging import setup_logging, app_logger
 from bot.handlers.dialogs.user.main_menu.dialog import user_panel
 from bot.handlers.dialogs.user.api_connect.dialog import api_connect
 from bot.handlers.dialogs.user.employee.dialog import employee
-# from tgbot.dialogs.broadcast_dialog import broadcast_dialog
 
 from bot.database.engine import async_session_maker, engine
 from bot.middlewares.uow import UnitOfWorkMiddleware
 from bot.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.utils.logger_config import configure_logging
 from bot.utils.i18n import create_translator_hub
-from bot.utils.nats_connect import connect_to_nats
-from bot.utils.start_consumer import start_broadcast_consumer
 from bot.handlers import get_routers
 
 

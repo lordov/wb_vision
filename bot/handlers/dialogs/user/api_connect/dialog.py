@@ -10,7 +10,7 @@ from aiogram_dialog.widgets.input import MessageInput
 
 from bot.handlers.states import ApiPanel
 from .getters import api_start, key_input
-from .callback import api_key_input
+from .callback import api_key_input, delete_api_key
 
 
 api_connect = Dialog(
@@ -26,7 +26,7 @@ api_connect = Dialog(
                 Button(
                     Format('{api_key_btn}'),
                     id='delete_key',
-                    on_click=...,
+                    on_click=delete_api_key,
                     when='inactive'
                 )
             ),

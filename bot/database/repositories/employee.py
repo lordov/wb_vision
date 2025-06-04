@@ -23,7 +23,7 @@ class EmployeeRepository(SQLAlchemyRepository[Employee]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_by_telegram_id(self, owner_id: int, telegram_id: int) -> Employee | None:
+    async def get_by_telegram_id(self, telegram_id: int, owner_id: int) -> Employee | None:
         stmt = select(Employee).where(
             Employee.telegram_id == telegram_id,
             Employee.owner_id == owner_id,

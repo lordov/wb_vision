@@ -66,6 +66,8 @@ api-key-btn =
 
 api-key-input = Введите API-ключ "статистика":
 
+api-key-deleted = API-ключ удален
+
 api-key-invalid = Неверный формат API-ключа.
 api-key-invalid-request = API-ключ не прошёл проверку — он не работает.
 api-key-success = API-ключ успешно сохранён и активирован! Вы будете получать уведомления.

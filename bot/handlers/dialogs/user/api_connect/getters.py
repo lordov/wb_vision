@@ -25,6 +25,7 @@ async def api_start(
         'back': i18n.get('back-btn'),
         'active': not has_key,
         'inactive': has_key,
+        'delete_api_key_btn': i18n.get('delete-api-key-btn', status=status),
     }
 
 

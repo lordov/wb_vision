@@ -27,18 +27,18 @@ class BaseAPIClient:
 
     def __init__(
         self,
-        # auth_strategy: AuthStrategy,
-        token: str | None = None,
+        auth_strategy: Optional[AuthStrategy] = None,
         cache_ttl: int = 3600
     ):
-        # self.auth_strategy = auth_strategy
-        self.token = token
+        self.auth_strategy = auth_strategy
         self.cache = TTLCache(maxsize=1000, ttl=cache_ttl)
-        self.auth_headers = {
-            "Authorization": f"{decrypt_api_key(self.token)}"} if token else None
-
         # Логгеры
         self.api_logger = api_logger
+
+    @property
+    def auth_headers(self) -> Optional[dict]:
+        """Получение заголовков аутентификации из стратегии."""
+        return self.auth_strategy.get_headers() if self.auth_strategy else None
 
     def set_cache(self, cache: TTLCache) -> None:
         """
@@ -138,6 +138,9 @@ class BaseAPIClient:
         :param headers: Произвольные заголовки.
         :return: JSON-ответ сервера или None в случае ошибки.
         """
+        request_headers = headers or {}
+        if self.auth_headers:
+            request_headers.update(self.auth_headers)
         retries = 0
         # Заголовки из стратегии
         caller = inspect.stack()[1].function
@@ -146,7 +149,7 @@ class BaseAPIClient:
                 try:
                     start_time = time.time()
                     async with session.request(
-                            method, url, params=params, json=json, headers=headers or self.auth_headers) as response:
+                            method, url, params=params, json=json, headers=request_headers) as response:
                         duration = time.time() - start_time
                         response.raise_for_status()
                         if response.status == 200:

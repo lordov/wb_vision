@@ -1,10 +1,27 @@
 from typing import Optional
 
+from bot.api.auth.strategy import APIKeyAuthStrategy
+from bot.core.security import decrypt_api_key
 from bot.schemas.wb import OrderWBCreate
 from .base_api_client import BaseAPIClient
 
 
 class WBAPIClient(BaseAPIClient):
+    def __init__(self, token: Optional[str] = None, cache_ttl: int = 3600, plain_token: Optional[str] = None):
+        self.plain_token = plain_token
+        if token:
+            # Создаем APIKeyAuthStrategy с расшифрованным токеном
+            decrypted_token = decrypt_api_key(token)
+            auth_strategy = APIKeyAuthStrategy(decrypted_token)
+        elif plain_token:
+            # Используем незашифрованный токен для проверки
+            auth_strategy = APIKeyAuthStrategy(plain_token)
+        else:
+            auth_strategy = None
+
+        # Вызываем конструктор базового класса с нашей стратегией
+        super().__init__(auth_strategy=auth_strategy, cache_ttl=cache_ttl)
+
     # Продажи
     async def get_sales(
             self,

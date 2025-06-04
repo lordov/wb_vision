@@ -83,16 +83,14 @@ class ApiKeyService:
         user = await self.user_repo.get_by_tg_id(telegram_id)
         if not user:
             raise ValueError("User not found")
-        await self.repo.deactivate_user_keys(user.id)
+        await self.repo.delete_user_keys(user.id)
 
     async def validate_wb_api_key(self, key: str) -> bool:
         return len(key) > 30
 
     async def check_request_to_wb(self, raw_key: str) -> bool:
         """Проверяет валидность ключа через метод ping Wildberries."""
-        auth_strategy = APIKeyAuthStrategy(
-            api_key=raw_key)  # Какой у тебя класс стратегии
-        client = WBAPIClient(auth_strategy=auth_strategy)
+        client = WBAPIClient(plain_token=raw_key)
 
         try:
             response = await client.ping_wb()
