@@ -21,7 +21,7 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def get_active_by_user(self, user_id: int) -> ApiKeyWithTelegramDTO:
+    async def get_active_by_user(self, user_id: int) -> ApiKeyWithTelegramDTO | None:
         """Получить один активный ключ (если нужен один по умолчанию)."""
         stmt = select(ApiKey).where(
             ApiKey.user_id == user_id,
@@ -29,6 +29,8 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
         )
         result = await self.session.execute(stmt)
         key = result.scalar_one_or_none()
+        if not key:
+            return None
         return ApiKeyWithTelegramDTO(
             id=key.id,
             user_id=key.user_id,

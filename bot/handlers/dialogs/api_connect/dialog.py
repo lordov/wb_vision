@@ -1,9 +1,9 @@
 from aiogram.enums import ContentType
 
-from aiogram_dialog import Dialog, StartMode,  Window
+from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.kbd import (
-    Row,  Column,  Group, Back, Next,
-    Cancel, Button, SwitchTo, Start,
+    Column,  Group, Back, Next,
+    Cancel, Button
 )
 from aiogram_dialog.widgets.text import Format
 from aiogram_dialog.widgets.input import MessageInput

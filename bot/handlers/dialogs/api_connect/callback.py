@@ -1,5 +1,5 @@
-from aiogram_dialog import DialogManager, ShowMode
-from aiogram.types import Message, CallbackQuery
+from aiogram_dialog import DialogManager
+from aiogram.types import Message
 from aiogram_dialog.widgets.kbd import Button
 
 from fluentogram import TranslatorRunner
@@ -10,6 +10,7 @@ from bot.services.subscription import SubscriptionService
 from bot.core.logging import app_logger
 from bot.core.security import fernet
 from bot.handlers.states import ApiPanel
+from broker import pre_load_orders
 
 
 async def api_key_input(
@@ -56,6 +57,9 @@ async def api_key_input(
                 i18n.get("subscribe-to-activate-key")
             )
             await dialog_manager.switch_to(ApiPanel.start)
+
+        await message.answer(i18n.get("api-key-pre-load"))
+        await pre_load_orders.kiq(telegram_id=user.id)
 
     except Exception as e:
         app_logger.exception("API Key save failed",

@@ -8,10 +8,7 @@ from aiogram_dialog import DialogManager, StartMode
 from fluentogram import TranslatorRunner
 
 from bot.core.dependency.container import DependencyContainer
-from bot.services.api_key import ApiKeyService
-from bot.services.notifications import NotificationService
 from bot.services.users import UserService
-from bot.services.wb_service import WBService
 from .states import UserPanel, Support
 from bot.core.config import settings
 from broker import my_task

@@ -5,7 +5,6 @@ from sqlalchemy import (
 from decimal import Decimal
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
-from uuid import uuid4
 
 from .base import Base
 

@@ -15,9 +15,9 @@ from redis.exceptions import ConnectionError
 from bot.core.config import settings
 from bot.core.dependency.container_init import init_container
 from bot.core.logging import setup_logging, app_logger
-from bot.handlers.dialogs.user.main_menu.dialog import user_panel
-from bot.handlers.dialogs.user.api_connect.dialog import api_connect
-from bot.handlers.dialogs.user.employee.dialog import employee
+from bot.handlers.dialogs.main_menu.dialog import user_panel
+from bot.handlers.dialogs.api_connect.dialog import api_connect
+from bot.handlers.dialogs.employee.dialog import employee
 
 from bot.database.engine import async_session_maker, engine
 from bot.middlewares.uow import UnitOfWorkMiddleware

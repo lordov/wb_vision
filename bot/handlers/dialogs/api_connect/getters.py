@@ -14,7 +14,7 @@ async def api_start(
 ) -> dict:
     async with await container.create_uow():
         api_key_service = await container.get(ApiKeyService)
-        key = await api_key_service.get_user_key(event_from_user.id, "wb_stats")
+        key = await api_key_service.get_user_key(event_from_user.id)
 
     has_key = key is not None
     status = "delete" if has_key else "set"
