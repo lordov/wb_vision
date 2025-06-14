@@ -14,7 +14,6 @@ from redis.exceptions import ConnectionError
 
 from bot.core.config import settings
 from bot.core.dependency.container_init import init_container
-from bot.core.dependency.container import DependencyContainer
 from bot.core.logging import setup_logging, app_logger
 from bot.handlers.dialogs.user.main_menu.dialog import user_panel
 from bot.handlers.dialogs.user.api_connect.dialog import api_connect
@@ -26,9 +25,10 @@ from bot.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.utils.logger_config import configure_logging
 from bot.utils.i18n import create_translator_hub
 from bot.handlers import get_routers
+from broker import broker
 
 
-async def setup_dispatcher(container: DependencyContainer) -> Dispatcher:
+def create_storage():
     """
     Function to set up the dispatcher (Dispatcher).
 
@@ -44,9 +44,6 @@ async def setup_dispatcher(container: DependencyContainer) -> Dispatcher:
     redis = Redis()
 
     try:
-        # Try to ping Redis
-        await redis.ping()
-
         # If successful, create a Redis storage
         storage = RedisStorage(
             redis=redis, key_builder=DefaultKeyBuilder(with_destiny=True))
@@ -56,13 +53,41 @@ async def setup_dispatcher(container: DependencyContainer) -> Dispatcher:
         print("Redis is not available, using MemoryStorage instead.")
         storage = MemoryStorage()
 
-    # Create a dispatcher with the chosen storage
-    dp = Dispatcher(db_engine=engine, storage=storage, container=container)
-    dp.update.outer_middleware(UnitOfWorkMiddleware(
-        session_pool=async_session_maker))
-    dp.update.middleware(TranslatorRunnerMiddleware())
+    return storage
 
-    return dp
+
+storage = create_storage()
+container = init_container()
+
+# Create a dispatcher with the chosen storage
+dp = Dispatcher(db_engine=engine, storage=storage, container=container)
+dp.update.outer_middleware(UnitOfWorkMiddleware(
+    session_pool=async_session_maker))
+dp.update.middleware(TranslatorRunnerMiddleware())
+
+bot: Bot = Bot(
+    token=settings.bot.token.get_secret_value(),
+    default=DefaultBotProperties(
+        parse_mode=ParseMode.HTML
+    )
+)
+
+
+@dp.startup()
+async def setup_taskiq(bot: Bot, *_args, **_kwargs):
+    # Here we check if it's a client-side,
+    # Because otherwise you're going to
+    # create infinite loop of startup events.
+    if not broker.is_worker_process:
+        app_logger.info("Setting up taskiq")
+        await broker.startup()
+
+
+@dp.shutdown()
+async def shutdown_taskiq(bot: Bot, *_args, **_kwargs):
+    if not broker.is_worker_process:
+        app_logger.info("Shutting down taskiq")
+        await broker.shutdown()
 
 
 async def setup_bot(dp: Dispatcher) -> Bot:
@@ -76,12 +101,6 @@ async def setup_bot(dp: Dispatcher) -> Bot:
     Returns:
         Bot: The aiogram bot object.
     """
-    bot: Bot = Bot(
-        token=settings.bot.token.get_secret_value(),
-        default=DefaultBotProperties(
-            parse_mode=ParseMode.HTML
-        )
-    )
 
     dp.include_routers(*get_routers())
     dp.include_routers(user_panel, api_connect, employee)
@@ -95,11 +114,6 @@ async def main():
     setup_logging()
     app_logger.info('Starting bot...', context='init')
     translator_hub: TranslatorHub = create_translator_hub()
-
-    container = init_container()
-
-    # Set up the dispatcher with the chosen storage
-    dp: Dispatcher = await setup_dispatcher(container)
 
     # Set up the bot with the provided token and default properties
     bot: Bot = await setup_bot(dp)

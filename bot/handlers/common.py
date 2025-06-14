@@ -14,6 +14,7 @@ from bot.services.users import UserService
 from bot.services.wb_service import WBService
 from .states import UserPanel, Support
 from bot.core.config import settings
+from broker import my_task
 
 
 router = Router()
@@ -103,41 +104,8 @@ async def lk_start(message: Message, dialog_manager: DialogManager):
 @router.message(Command("task"))
 async def task(
     message: Message,
-    i18n: TranslatorRunner,
-    container: DependencyContainer,
 ):
-    async def notify_user_about_orders(
-        telegram_id: int,
-        texts: list[dict],
-        container: DependencyContainer
-    ):
-        service = await container.get(NotificationService)
-        await service.send_message(telegram_id=telegram_id, texts=texts)
-
-    async def fetch_and_save_orders_for_key(
-        user_id: int,
-        telegram_id: int,
-        key_encrypted: str,
-        container: DependencyContainer
-    ):
-        async with await container.create_uow():
-            service = await container.get(WBService)
-            texts = await service.fetch_and_save_orders(api_key=key_encrypted, user_id=user_id)
-
-            if texts:
-                await notify_user_about_orders(telegram_id, texts, container=container)
-
-    service = await container.get(ApiKeyService)
-    async with await container.create_uow():
-        api_keys = await service.get_all_decrypted_keys()
-        for key in api_keys:
-            await fetch_and_save_orders_for_key(
-                user_id=key.user_id,
-                key_encrypted=key.key_encrypted,
-                telegram_id=key.telegram_id,
-                container=container
-            )
-        print(f'{key.key_encrypted} отправлен в задачу')
+    await my_task.kiq(message.chat.id)
 
 
 @router.message(Command('support'))

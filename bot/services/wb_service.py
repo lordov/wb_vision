@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from fluentogram import TranslatorHub
 
 from bot.api.wb import WBAPIClient
@@ -54,11 +55,23 @@ class WBService:
 
         return texts
 
+    async def pre_load_orders(self, user_id: int, api_key: str) -> None:
+
+        api_client = WBAPIClient(token=api_key)
+        date_from = datetime.now() - timedelta(days=90)
+        orders = await api_client.get_orders(user_id, date_from)
+        async with self.uow:
+            await self.uow.wb_orders.add_orders_bulk(orders=orders)
+            await self.uow.commit()
+            app_logger.info(
+                f"Pre-loaded orders: {user_id} {len(orders)} ")
+
     async def _generate_texts(self, orders: list[NotifOrder]) -> list[dict]:
         result = []
 
         for order in orders:
-            total_price = round(order.total_price * (1 - order.discount_percent / 100))
+            total_price = round(order.total_price *
+                                (1 - order.discount_percent / 100))
 
             text = self.i18n.get(
                 "order-text",

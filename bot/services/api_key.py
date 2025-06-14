@@ -19,13 +19,13 @@ class ApiKeyService:
         self.user_repo = uow.users
         self.fernet = fernet
 
-    async def get_user_key(self, telegram_id: int, title: str) -> ApiKey | None:
+    async def get_user_key(self, telegram_id: int) -> ApiKeyWithTelegramDTO:
         user = await self.user_repo.get_by_tg_id(telegram_id)
         if not user:
             raise ValueError("User not found")
-        app_logger.info("Fetching API key titles",
-                        user_id=user.id, title=title)
-        key = await self.repo.get_active_by_user(user.id, title=title)
+        app_logger.info("Fetching API key",
+                        user_id=user.id)
+        key = await self.repo.get_active_by_user(user.id)
         return key
 
     async def get_decrypted_by_title(self, telegram_id: int, title: str) -> str | None:

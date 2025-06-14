@@ -40,7 +40,7 @@ class ApiKey(Base):
         Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", name='fk_user_id'), index=True)
-    title: Mapped[str] = mapped_column(String(100))
+    title: Mapped[str] = mapped_column(String(100), default="API Key")
     key_encrypted: Mapped[str] = mapped_column(String, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 

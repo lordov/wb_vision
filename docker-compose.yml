@@ -24,6 +24,18 @@ services:
   #     - nats
   #   restart: always
 
+  # scheduler:
+  #   build: .
+  #   container_name: scheduler
+  #   command: [ "taskiq", "scheduler", "broker:scheduler" ]
+  #   env_file: .env
+  #   depends_on:
+  #     - nats
+  #     - db
+  #     - redis
+  #     - bot
+  #   restart: always
+
   migrate:
     build: .
     container_name: migrate

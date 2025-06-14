@@ -1,11 +1,14 @@
+import asyncio
+import taskiq_aiogram
+from aiogram import Bot
+
 from typing import Annotated
-from taskiq import Context, TaskiqDepends, TaskiqEvents, TaskiqState
+from taskiq import Context, TaskiqDepends, TaskiqEvents, TaskiqScheduler, TaskiqState
+from taskiq.schedule_sources import LabelScheduleSource
 from taskiq_nats import PullBasedJetStreamBroker, NATSObjectStoreResultBackend
 from nats.js.api import ConsumerConfig
 
 from bot.core.config import settings
-import asyncio
-
 from bot.core.dependency.container import DependencyContainer
 from bot.core.dependency.container_init import init_container
 from bot.services.api_key import ApiKeyService
@@ -25,11 +28,15 @@ broker = PullBasedJetStreamBroker(
     ),
 
 ).with_result_backend(NATSObjectStoreResultBackend(settings.nats.url))
-# broker.add_middlewares(SimpleRetryMiddleware())
-# scheduler = TaskiqScheduler(broker, sources=[LabelScheduleSource(broker)])
-
-# для тестов
-# broker = InMemoryBroker()
+taskiq_aiogram.init(
+    broker,
+    "main:dp",
+    "main:bot",
+)
+scheduler = TaskiqScheduler(
+    broker,
+    sources=[LabelScheduleSource(broker)]
+)
 
 
 @broker.on_event(TaskiqEvents.WORKER_STARTUP)
@@ -41,6 +48,13 @@ async def startup(state: TaskiqState) -> None:
 
 def container_dep(context: Annotated[Context, TaskiqDepends()]) -> DependencyContainer:
     return context.state.container
+
+
+@broker.task(task_name="my_task")
+async def my_task(chat_id: int, bot: Bot = TaskiqDepends()) -> None:
+    print("I'm a task")
+    await asyncio.sleep(4)
+    await bot.send_message(chat_id, "task completed")
 
 
 @broker.task
@@ -56,9 +70,21 @@ async def add_one(
 
 
 @broker.task
+async def pre_load_orders(
+    telegram_id: int,
+    container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
+):
+    app_logger.info(f'Pre-loaded orders for {telegram_id}')
+    wb_service = await container.get(WBService)
+    api_service = await container.get(ApiKeyService)
+    api_key = await api_service.get_user_key(telegram_id=telegram_id)
+    await wb_service.pre_load_orders(api_key.user_id, api_key.key_encrypted)
+
+
+@broker.task(schedule=[{"cron": "*/10 * * * *"}])
 async def start_notif_pipline(container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]) -> None:
-    service = await container.get(ApiKeyService)
-    api_keys = await service.get_all_decrypted_keys()
+    api_service = await container.get(ApiKeyService)
+    api_keys = await api_service.get_all_decrypted_keys()
     for key in api_keys:
         await fetch_and_save_orders_for_key.kiq(
             user_id=key.user_id,
