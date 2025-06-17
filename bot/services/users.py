@@ -52,7 +52,11 @@ class UserService:
             return new_employee
 
     async def add_user(self, telegram_id: int, username: str, locale: str = "ru") -> User | None:
-        return await self.repo_users.add_user(telegram_id, username, locale)
+        user = await self.repo_users.add_user(telegram_id, username, locale)
+        if user:
+            await self.uow.commit()
+            return user
+        return None
 
     async def get_active_employees(self, telegram_id: int) -> list[Employee] | None:
         owner = await self.repo_users.get_by_tg_id(telegram_id)
