@@ -1,6 +1,5 @@
 from cryptography.fernet import Fernet, InvalidToken
 
-from bot.api.auth.strategy import APIKeyAuthStrategy
 from bot.api.wb import WBAPIClient
 from bot.database.models import ApiKey
 from bot.database.uow import UnitOfWork

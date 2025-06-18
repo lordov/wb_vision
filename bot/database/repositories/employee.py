@@ -1,8 +1,7 @@
 from typing import Type
 from datetime import datetime, timedelta
-from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from bot.database.models import Employee, EmployeeInvite

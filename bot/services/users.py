@@ -13,15 +13,15 @@ class UserService:
         self.uow = uow
         self.employee = uow.employee
         self.employee_invite = uow.employee_invites
-        self.repo_users = uow.users
+        self.users = uow.users
 
     async def get_by_user_id(self, user_id: int) -> User | None:
-        return await self.repo_users.get_by_user_id(user_id)
+        return await self.users.get_by_user_id(user_id)
 
     async def generate_employee_invite(self, telegram_id: int) -> str:
         async with self.uow as uow:
             token = secrets.token_hex(16)
-            owner = await self.repo_users.get_by_tg_id(telegram_id)
+            owner = await self.users.get_by_tg_id(telegram_id)
             invate = await self.employee_invite.add_invite(token, owner.id)
 
             if not invate:
@@ -41,7 +41,7 @@ class UserService:
         return await self.employee.check_user_as_employee(telegram_id)
 
     async def add_employee(self, owner_id: int, telegram_id: int, username: str, token: str) -> Employee | None:
-        async with self.uow as uow:
+        async with self.uow:
             new_employee = await self.employee.add_employee(owner_id, telegram_id, username)
             if new_employee is None:
                 return
@@ -52,18 +52,18 @@ class UserService:
             return new_employee
 
     async def add_user(self, telegram_id: int, username: str, locale: str = "ru") -> User | None:
-        user = await self.repo_users.add_user(telegram_id, username, locale)
+        user = await self.users.add_user(telegram_id, username, locale)
         if user:
             await self.uow.commit()
             return user
         return None
 
     async def get_active_employees(self, telegram_id: int) -> list[Employee] | None:
-        owner = await self.repo_users.get_by_tg_id(telegram_id)
+        owner = await self.users.get_by_tg_id(telegram_id)
         return await self.employee.get_owners_employees(owner.id)
 
     async def delete_employee(self, telegram_id: int, employee_id: int) -> None:
-        owner = await self.repo_users.get_by_tg_id(telegram_id)
+        owner = await self.users.get_by_tg_id(telegram_id)
         await self.employee.deactivate_employee(owner.id, employee_id)
         await self.uow.commit()
         app_logger.info(

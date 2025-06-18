@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Numeric, String, ForeignKey, Boolean,
-    DateTime, BigInteger, Integer, UniqueConstraint, Index,
+    DateTime, BigInteger, Integer, UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase
 from decimal import Decimal

@@ -1,7 +1,6 @@
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
 from bot.database.models import Subscription
 from .base import SQLAlchemyRepository
 

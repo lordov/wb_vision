@@ -1,4 +1,4 @@
-from typing import Type, Optional, List
+from typing import Type, Optional
 from datetime import datetime, timedelta
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,7 +62,7 @@ class TaskStatusRepository(SQLAlchemyRepository[TaskStatus]):
             )
             raise
 
-    async def get_active_tasks(self, user_id: int, task_names: Optional[List[str]] = None) -> List[TaskStatus]:
+    async def get_active_tasks(self, user_id: int, task_names: Optional[list[str]] = None) -> list[TaskStatus]:
         """Получить активные задачи пользователя."""
         stmt = select(TaskStatus).where(
             TaskStatus.user_id == user_id,
@@ -104,7 +104,7 @@ class TaskStatusRepository(SQLAlchemyRepository[TaskStatus]):
             # В случае ошибки считаем, что задача активна (безопасность)
             return True
 
-    async def has_any_active_tasks(self, user_id: int, task_names: List[str]) -> bool:
+    async def has_any_active_tasks(self, user_id: int, task_names: list[str]) -> bool:
         """Проверить, есть ли любая из указанных активных задач у пользователя."""
         stmt = select(TaskStatus).where(
             TaskStatus.user_id == user_id,
@@ -172,7 +172,7 @@ class TaskStatusRepository(SQLAlchemyRepository[TaskStatus]):
             )
             return False
 
-    async def get_users_without_active_tasks(self, task_names: List[str]) -> List[int]:
+    async def get_users_without_active_tasks(self, task_names: list[str]) -> list[int]:
         """Получить список user_id пользователей без активных задач из указанного списка."""
         # Подзапрос для получения пользователей с активными задачами
         subquery = select(TaskStatus.user_id).where(

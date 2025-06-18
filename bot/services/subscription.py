@@ -1,4 +1,3 @@
-from bot.database.repositories.subscription import SubscriptionRepository
 from bot.database.models import Subscription
 from datetime import datetime, timedelta
 from bot.database.uow import UnitOfWork

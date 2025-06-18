@@ -56,9 +56,9 @@ async def start_with_deeplink(
         inviate = await user_service.check_invite(owner_id, token)
         owner = await user_service.get_by_user_id(owner_id)
 
-        # if owner.telegram_id == message.from_user.id:
-        #     await message.answer(i18n.get("self-error"))
-        #     return
+        if owner.telegram_id == message.from_user.id:
+            await message.answer(i18n.get("self-error"))
+            return
         
         if inviate is None:
             await message.answer(i18n.get("wrong-link"))

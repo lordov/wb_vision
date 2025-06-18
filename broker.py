@@ -18,14 +18,12 @@ from bot.services.task_control import TaskControlService, TaskName
 from bot.core.logging import app_logger
 
 
-# Для прода
 broker = PullBasedJetStreamBroker(
     settings.nats.url,
     stream_name="taskiq_jetstream",
     durable="wb_tasks",
     consumer_config=ConsumerConfig(
-        # Сколько можем дожидаться ответа, уменьшить размер задач
-        ack_wait=60 * 3,
+        ack_wait=60 * 5,
     ),
 
 ).with_result_backend(NATSObjectStoreResultBackend(settings.nats.url))
@@ -43,7 +41,6 @@ scheduler = TaskiqScheduler(
 @broker.on_event(TaskiqEvents.WORKER_STARTUP)
 async def startup(state: TaskiqState) -> None:
     container = init_container()
-    # Here we store connection pool on startup for later use.
     state.container = container
 
 
@@ -87,23 +84,11 @@ async def pre_load_orders(
         app_logger.info(f'Pre-load orders task blocked for user {user_id}')
         return
 
-    try:
-        app_logger.info(f'Pre-loaded orders for {telegram_id}')
-        await wb_service.pre_load_orders(user_id, api_key.key_encrypted)
+    app_logger.info(f'Pre-loaded orders for {telegram_id}')
+    await wb_service.pre_load_orders(user_id, api_key.key_encrypted)
 
-        # Отмечаем задачу как завершенную
-        await task_control.complete_task(user_id, TaskName.PRE_LOAD_ORDERS, success=True)
-
-    except Exception as e:
-        # Отмечаем задачу как неудачную
-        await task_control.complete_task(
-            user_id,
-            TaskName.PRE_LOAD_ORDERS,
-            success=False,
-            error_message=str(e)
-        )
-        app_logger.error(f'Pre-load orders failed for {user_id}: {e}')
-        raise
+    # Отмечаем задачу как завершенную
+    await task_control.complete_task(user_id, TaskName.PRE_LOAD_ORDERS, success=True)
 
 
 @broker.task(schedule=[{"cron": "*/10 * * * *"}])
