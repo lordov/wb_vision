@@ -10,6 +10,7 @@ from bot.services.subscription import SubscriptionService
 from bot.services.notifications import NotificationService
 from bot.services.users import UserService
 from bot.services.wb_service import WBService
+from bot.services.task_control import TaskControlService
 
 T = TypeVar("T")
 
@@ -74,5 +75,9 @@ class DependencyContainer:
         elif service_type is UserService:
             uow = await self.create_uow()
             return UserService(uow=uow)
+            
+        elif service_type is TaskControlService:
+            uow = await self.create_uow()
+            return TaskControlService(uow=uow)
 
         raise ValueError(f"Unknown service: {service_type}")

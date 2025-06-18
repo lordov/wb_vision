@@ -1,12 +1,17 @@
 from sqlalchemy import (
     Numeric, String, ForeignKey, Boolean,
-    DateTime, BigInteger, Integer, UniqueConstraint
+    DateTime, BigInteger, Integer, UniqueConstraint, Index,
 )
+from sqlalchemy.orm import DeclarativeBase
 from decimal import Decimal
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 
-from .base import Base
+
+class Base(DeclarativeBase):
+    created: Mapped[datetime] = mapped_column(DateTime(), default=datetime.now)
+    updated: Mapped[datetime] = mapped_column(
+        DateTime(), default=datetime.now, onupdate=datetime.now)
 
 
 class User(Base):
@@ -30,6 +35,8 @@ class User(Base):
                              ] = relationship(back_populates="owner")
     payments: Mapped[list["Payment"]] = relationship(back_populates="user")
     orders: Mapped[list["OrdersWB"]] = relationship(back_populates="user")
+    task_statuses: Mapped[list["TaskStatus"]
+                          ] = relationship(back_populates="user")
 
 
 class ApiKey(Base):
@@ -259,6 +266,31 @@ class StocksWB(Base):
     __table_args__ = (UniqueConstraint(
         'import_date', 'user_id', 'warehouse_name', 'nm_id',
         name='unique_stocks'),)
+
+
+class TaskStatus(Base):
+    __tablename__ = 'task_status'
+
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    task_name: Mapped[str] = mapped_column(
+        String(100), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(
+        # running, completed, failed
+        String(20), nullable=False, default="running")
+    task_id: Mapped[str] = mapped_column(
+        String(255), nullable=True, index=True)  # ID задачи от брокера
+    completed_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=True)
+    error_message: Mapped[str] = mapped_column(
+        String(500), nullable=True)
+
+    user: Mapped["User"] = relationship(back_populates="task_statuses")
 
 
 if __name__ == '__main__':

@@ -8,9 +8,10 @@ from .repositories.user import UserRepository
 from .repositories.subscription import SubscriptionRepository
 from .repositories.api_key import WbApiKeyRepository
 from .repositories.employee import EmployeeRepository
+from .repositories.task_status import TaskStatusRepository
 from .models import (
     EmployeeInvite, OrdersWB, Payment, Employee,
-    SalesWB, StocksWB
+    SalesWB, StocksWB, TaskStatus
 )
 from bot.core.logging import db_logger
 
@@ -26,6 +27,7 @@ class UnitOfWork:
         self.wb_stocks = WBRepository(session, StocksWB)
         self.employee = EmployeeRepository(session, Employee)
         self.employee_invites = EmployeeRepository(session, EmployeeInvite)
+        self.task_status = TaskStatusRepository(session, TaskStatus)
 
         self.payments = SQLAlchemyRepository[Payment](session, Payment)
 

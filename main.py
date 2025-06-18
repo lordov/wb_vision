@@ -40,8 +40,8 @@ def create_storage():
         Dispatcher: The aiogram dispatcher object.
     """
 
-    # Create a Redis client
-    redis = Redis()
+    # Create a Redis client using settings URL
+    redis = Redis.from_url(settings.redis.url)
 
     try:
         # If successful, create a Redis storage

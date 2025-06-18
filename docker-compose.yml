@@ -12,29 +12,29 @@ services:
       - nats
     restart: always
 
-  # worker:
-  #   build: .
-  #   container_name: worker
-  #   command: [ "taskiq", "worker", "taskiq_worker:broker" ]
-  #   env_file: .env
-  #   depends_on:
-  #     - bot
-  #     - db
-  #     - redis
-  #     - nats
-  #   restart: always
+  worker:
+    build: .
+    container_name: worker
+    command: [ "taskiq", "worker", "broker:broker" ]
+    env_file: .env
+    depends_on:
+      - bot
+      - db
+      - redis
+      - nats
+    restart: always
 
-  # scheduler:
-  #   build: .
-  #   container_name: scheduler
-  #   command: [ "taskiq", "scheduler", "broker:scheduler" ]
-  #   env_file: .env
-  #   depends_on:
-  #     - nats
-  #     - db
-  #     - redis
-  #     - bot
-  #   restart: always
+  scheduler:
+    build: .
+    container_name: scheduler
+    command: [ "taskiq", "scheduler", "broker:scheduler" ]
+    env_file: .env
+    depends_on:
+      - nats
+      - db
+      - redis
+      - bot
+    restart: always
 
   migrate:
     build: .

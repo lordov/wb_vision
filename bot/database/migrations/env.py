@@ -1,10 +1,9 @@
+import sys
 from bot.core.config import settings
-from bot.database.models import Base  # все модели здесь
+from bot.database.models import Base
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
-import sys
-import os
 from pathlib import Path
 
 # Добавляем путь к проекту
