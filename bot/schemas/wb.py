@@ -91,8 +91,8 @@ class SalesWBCreate(BaseModel):
         validate_by_name = True
 
 
-class StocksWBCreate(BaseModel):
-    import_date: datetime = Field(..., alias="importDate")
+class StockWBCreate(BaseModel):
+    user_id: int
     last_change_date: datetime = Field(..., alias="lastChangeDate")
     supplier_article: str = Field(..., alias="supplierArticle")
     tech_size: str = Field(..., alias="techSize")
@@ -109,8 +109,8 @@ class StocksWBCreate(BaseModel):
     quantity_full:int = Field(..., alias="quantityFull")
     warehouse_name: str = Field(..., alias="warehouseName")
     sc_code: Optional[str] = Field(None, alias="SCCode")
-    price: Decimal
-    discount: Decimal
+    price: Decimal = Field(..., alias="Price")
+    discount: Decimal = Field(..., alias="Discount")
 
     class Config:
         populate_by_name = True

@@ -22,7 +22,6 @@ from bot.handlers.dialogs.employee.dialog import employee
 from bot.database.engine import async_session_maker, engine
 from bot.middlewares.uow import UnitOfWorkMiddleware
 from bot.middlewares.i18n import TranslatorRunnerMiddleware
-from bot.utils.logger_config import configure_logging
 from bot.utils.i18n import create_translator_hub
 from bot.handlers import get_routers
 from broker import broker
@@ -140,5 +139,4 @@ async def main():
 
 # Запуск бота
 if __name__ == '__main__':
-    configure_logging()
     asyncio.run(main())

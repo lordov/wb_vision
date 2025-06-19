@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from bot.core.logging import db_logger
 
-from bot.schemas.wb import NotifOrder, OrderWBCreate, SalesWBCreate, StocksWBCreate
+from bot.schemas.wb import NotifOrder, OrderWBCreate, SalesWBCreate, StockWBCreate
+from bot.utils.utils import chunked_list
 from ..models import OrdersWB, StocksWB, SalesWB
 from ..repositories.base import SQLAlchemyRepository
 from .base import T
@@ -50,7 +51,7 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
         if not orders:
             return
 
-        data = [order.model_dump(by_alias=True) for order in orders]
+        data = [order.model_dump() for order in orders]
 
         stmt = insert(SalesWB).values(data)
         stmt = stmt.on_conflict_do_nothing(
@@ -59,19 +60,24 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
         )
         await self.session.execute(stmt)
 
-    async def add_stocks_bulk(self, orders: list[StocksWBCreate]) -> None:
-        """Добавить продажи пачкой"""
-        if not orders:
+    async def add_stocks_bulk(self, stocks: list[StockWBCreate]) -> None:
+        if not stocks:
             return
 
-        data = [order.model_dump(by_alias=True) for order in orders]
+        CHUNK_SIZE = 500  # подбери значение экспериментально
 
-        stmt = insert(StocksWB).values(data)
-        stmt = stmt.on_conflict_do_nothing(
-            index_elements=['import_date', 'user_id',
-                            'warehouse_name', 'nm_id', 'tech_size']
-        )
-        await self.session.execute(stmt)
+        for chunk in chunked_list(stocks, CHUNK_SIZE):
+            data = [stock.model_dump() for stock in chunk]
+
+            stmt = insert(StocksWB).values(data)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=['user_id', 'warehouse_name', 'nm_id'],
+                set_=dict(
+                    quantity=stmt.excluded.quantity,
+                    last_change_date=stmt.excluded.last_change_date,
+                )
+            )
+            await self.session.execute(stmt)
 
     async def counter_and_amount(self, user_id: int, order_id: int, date: datetime.date) -> int:
         """

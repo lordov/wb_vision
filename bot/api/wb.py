@@ -2,7 +2,7 @@ from typing import Optional
 
 from bot.api.auth.strategy import APIKeyAuthStrategy
 from bot.core.security import decrypt_api_key
-from bot.schemas.wb import OrderWBCreate
+from bot.schemas.wb import OrderWBCreate, StockWBCreate
 from .base_api_client import BaseAPIClient
 
 
@@ -63,6 +63,12 @@ class WBAPIClient(BaseAPIClient):
         url = "https://statistics-api.wildberries.ru/ping"
         response = await self._request("GET", url)
         return response
+
+    async def get_stocks(self, user_id: int, date_from: str = '2025-05-19'):
+        url = f"https://statistics-api.wildberries.ru/api/v1/supplier/stocks?dateFrom={
+            date_from}"
+        stocks_data = await self._request("GET", url)
+        return [StockWBCreate(**stock, user_id=user_id) for stock in stocks_data]
 
 
 if __name__ == "__main__":

@@ -91,6 +91,42 @@ async def pre_load_orders(
     await task_control.complete_task(user_id, TaskName.PRE_LOAD_ORDERS, success=True)
 
 
+@broker.task(schedule=[{"cron": "*/30 * * * *"}])
+async def start_load_stocks(container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]):
+    api_service = await container.get(ApiKeyService)
+    task_control = await container.get(TaskControlService)
+
+    api_keys = await api_service.get_all_decrypted_keys()
+    api_user_ids = [key.user_id for key in api_keys]
+    available_user_ids = await task_control.get_available_users_for_task(
+        api_user_ids,
+        TaskName.LOAD_STOCKS
+    )
+    # Фильтруем ключи по доступным пользователям
+    available_keys = [
+        key for key in api_keys if key.user_id in available_user_ids]
+
+    for key in available_keys:
+        if await task_control.start_task(key.user_id, TaskName.LOAD_STOCKS):
+            await load_stocks.kiq(key.user_id, key.key_encrypted)
+        else:
+            app_logger.info(f'LOAD_STOCKS blocked for user {key.user_id}')
+
+    app_logger.info(f'Loaded stocks for {len(api_keys)} users')
+
+
+@broker.task
+async def load_stocks(
+    user_id: int,
+    api_key: str,
+    container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
+):
+    wb_service = await container.get(WBService)
+    task_control = await container.get(TaskControlService)
+    await wb_service.load_stocks(user_id, api_key)
+    await task_control.complete_task(user_id, TaskName.LOAD_STOCKS, success=True)
+
+
 @broker.task(schedule=[{"cron": "*/10 * * * *"}])
 async def start_notif_pipline(container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]) -> None:
     api_service = await container.get(ApiKeyService)

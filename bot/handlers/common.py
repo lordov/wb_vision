@@ -11,7 +11,7 @@ from bot.core.dependency.container import DependencyContainer
 from bot.services.users import UserService
 from .states import UserPanel, Support
 from bot.core.config import settings
-from broker import my_task
+from broker import my_task, start_load_stocks
 
 
 router = Router()
@@ -101,8 +101,9 @@ async def lk_start(message: Message, dialog_manager: DialogManager):
 @router.message(Command("task"))
 async def task(
     message: Message,
+    container: DependencyContainer,
 ):
-    await my_task.kiq(message.chat.id)
+    await start_load_stocks(container)
 
 
 @router.message(Command('support'))

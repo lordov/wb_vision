@@ -66,6 +66,14 @@ class WBService:
             app_logger.info(
                 f"Pre-loaded orders: {user_id} {len(orders)} ")
 
+    async def load_stocks(self, user_id: int, api_key: str) -> None:
+        api_client = WBAPIClient(token=api_key)
+        stocks = await api_client.get_stocks(user_id)
+        async with self.uow:
+            await self.uow.wb_stocks.add_stocks_bulk(stocks=stocks)
+            await self.uow.commit()
+            app_logger.info(f"Loaded stocks: {user_id} {len(stocks)} ")
+
     async def _generate_texts(self, orders: list[NotifOrder]) -> list[dict]:
         result = []
 

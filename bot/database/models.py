@@ -235,9 +235,7 @@ class StocksWB(Base):
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
-    import_date: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, index=True)
-    last_сhange_date: Mapped[datetime] = mapped_column(DateTime, index=True)
+    last_change_date: Mapped[datetime] = mapped_column(DateTime, index=True)
     supplier_article: Mapped[str] = mapped_column(
         String(75), nullable=False, index=True)
     tech_size: Mapped[str] = mapped_column(String(30), nullable=True)
@@ -264,7 +262,7 @@ class StocksWB(Base):
     )
 
     __table_args__ = (UniqueConstraint(
-        'import_date', 'user_id', 'warehouse_name', 'nm_id',
+        'user_id', 'warehouse_name', 'nm_id',
         name='unique_stocks'),)
 
 

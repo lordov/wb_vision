@@ -9,6 +9,7 @@ class TaskName(Enum):
     """Enum для названий задач."""
     PRE_LOAD_ORDERS = "pre_load_orders"
     START_NOTIF_PIPELINE = "start_notif_pipeline"
+    LOAD_STOCKS = "load_stocks"
 
 
 class TaskControlService:
@@ -17,6 +18,7 @@ class TaskControlService:
     # Определяем зависимости между задачами
     TASK_CONFLICTS = {
         TaskName.START_NOTIF_PIPELINE: [TaskName.PRE_LOAD_ORDERS, TaskName.START_NOTIF_PIPELINE],
+        TaskName.LOAD_STOCKS: [TaskName.LOAD_STOCKS],
     }
 
     def __init__(self, uow: UnitOfWork):
