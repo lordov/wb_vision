@@ -31,7 +31,8 @@ class WBService:
 
     async def fetch_and_save_orders(self, user_id: int, api_key: str) -> list[str] | None:
         api_client = WBAPIClient(token=api_key)
-        orders = await api_client.get_orders(user_id)
+        date_from = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        orders = await api_client.get_orders(user_id, date_from)
 
         if not orders:
             return

@@ -299,43 +299,57 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
 
     async def stock_stats(self, nm_id: str) -> Optional[str]:
         """
-        Получает количество единиц товара на каждом складе по артикулу товара (nmId) на последний доступный момент.
+        Получает количество единиц товара на каждом складе по артикулу товара (nmId) 
+        с группировкой по складу и дате изменения.
         """
         try:
-            # Получаем последнюю дату изменения для данного nmId
-            stmt = select(func.max(StocksWB.last_change_date)
-                          ).where(StocksWB.nm_id == nm_id)
-            result = await self.session.execute(stmt)
-            last_change_date = result.scalar()
-
-            if not last_change_date:
-                return f"Остаток для {nm_id}: 0"
-
-            # Получаем остатки товара на складах на последнюю дату изменения
+            # Используем запрос с группировкой по складу и дате, как в SQL
             stmt = (
-                select(StocksWB.warehouse_name, StocksWB.quantity)
+                select(
+                    StocksWB.warehouse_name,
+                    func.sum(StocksWB.quantity).label("total_quantity"),
+                    StocksWB.last_change_date
+                )
                 .where(
                     StocksWB.nm_id == nm_id,
-                    StocksWB.quantity > 0,
-                    StocksWB.last_change_date == last_change_date
+                    StocksWB.quantity.is_not(None)
                 )
+                .group_by(StocksWB.warehouse_name, StocksWB.last_change_date)
+                .having(func.sum(StocksWB.quantity) > 0)
             )
+            
             results = await self.session.execute(stmt)
             stock_data = results.fetchall()
 
             if not stock_data:
                 return f"Остаток для {nm_id}: 0"
 
-            # Группируем количество по складам
-            warehouse_totals = defaultdict(int)
-            for warehouse, quantity in stock_data:
-                warehouse_totals[warehouse] += quantity
+            # Группируем по складам и находим последнюю дату для каждого склада
+            warehouse_data = defaultdict(list)
+            for warehouse, quantity, change_date in stock_data:
+                warehouse_data[warehouse].append((quantity, change_date))
+
+            # Для каждого склада берем данные с последней датой
+            warehouse_totals = {}
+            latest_dates = {}
+            
+            for warehouse, data_list in warehouse_data.items():
+                # Находим последнюю дату для этого склада
+                latest_entry = max(data_list, key=lambda x: x[1])
+                warehouse_totals[warehouse] = latest_entry[0]
+                latest_dates[warehouse] = latest_entry[1]
 
             # Получаем общее количество
             total_quantity = sum(warehouse_totals.values())
 
+            if total_quantity == 0:
+                return f"Остаток для {nm_id}: 0"
+
+            # Находим самую позднюю дату среди всех складов
+            overall_latest_date = max(latest_dates.values())
+
             # Формируем текст
-            output = f'Дата обновления: {last_change_date.strftime("%Y-%m-%d")}\n'
+            output = f'Дата обновления: {overall_latest_date.strftime("%Y-%m-%d")}\n'
             for warehouse, quantity in warehouse_totals.items():
                 output += f"📦 {warehouse} – {quantity} шт.\n"
 

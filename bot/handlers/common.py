@@ -11,7 +11,7 @@ from bot.core.dependency.container import DependencyContainer
 from bot.services.users import UserService
 from .states import UserPanel, Support
 from bot.core.config import settings
-from broker import my_task, start_load_stocks
+from broker import my_task, start_load_stocks, start_notif_pipline
 
 
 router = Router()
@@ -103,7 +103,7 @@ async def task(
     message: Message,
     container: DependencyContainer,
 ):
-    await start_load_stocks.kiq()
+    await start_notif_pipline(container=container)
 
 
 @router.message(Command('support'))

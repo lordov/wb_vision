@@ -95,7 +95,7 @@ order-text = {$date}
     🆔Артикул Поставщика: <a href='https://www.wildberries.ru/catalog/{$nm_id}/detail.aspx?targetUrl=SP'>{$article}</a>
     🏦Сегодня таких: {$total_today}₽
     📑Вчера таких: {$total_yesterday}₽
-    🛄{logistic}
+    🛄{$logistic}
     
     {$warehouse_text}
 
