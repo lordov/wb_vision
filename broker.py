@@ -152,10 +152,11 @@ async def start_notif_pipline(container: Annotated[DependencyContainer, TaskiqDe
     for key in available_keys:
         # Регистрируем начало пайплайна для пользователя
         if await task_control.start_task(key.user_id, TaskName.START_NOTIF_PIPELINE):
-            await fetch_and_save_orders_for_key.kiq(
+            await fetch_and_save_orders_for_key(
                 user_id=key.user_id,
                 api_key=key.key_encrypted,
                 telegram_id=key.telegram_id,
+                container=container
             )
             started_pipelines += 1
         else:
@@ -189,7 +190,7 @@ async def fetch_and_save_orders_for_key(
         return
 
     if texts:
-        await notify_user_about_orders.kiq(telegram_id, texts, user_id)
+        await notify_user_about_orders(telegram_id, texts, user_id, container=container)
 
 
 @broker.task()
@@ -203,17 +204,16 @@ async def notify_user_about_orders(
     task_control = await container.get(TaskControlService)
     employee_service = await container.get(UserService)
     employees = await employee_service.get_active_employees(telegram_id)
+    all_telegram_ids = [telegram_id] + \
+        [employee.telegram_id for employee in employees]
 
     try:
-        await service.send_message(telegram_id=telegram_id, texts=texts)
-        for employee in employees:
-            try:
-                await service.send_message(telegram_id=employee.telegram_id, texts=texts)
-                app_logger.info(
-                    f'Notification sent to employee {employee.telegram_id}')
-            except Exception as emp_err:
-                app_logger.error(
-                    f'Failed to send notification to employee {employee.telegram_id}: {emp_err}')
+        await asyncio.gather(*[
+            service.send_message(telegram_id=tid, texts=texts)
+            for tid in all_telegram_ids
+        ])
+        app_logger.info(
+            f'Notification sent to {len(all_telegram_ids)} employees')
 
         app_logger.info(
             f'Notifications sent for telegram_id {telegram_id}, user_id {user_id}')
