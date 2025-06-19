@@ -103,7 +103,7 @@ async def task(
     message: Message,
     container: DependencyContainer,
 ):
-    await start_load_stocks(container)
+    await start_load_stocks.kiq()
 
 
 @router.message(Command('support'))

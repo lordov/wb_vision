@@ -95,7 +95,8 @@ class WBService:
                 article=order.supplier_article,
                 total_today=order.total_today,
                 total_yesterday=order.total_yesterday,
-                warehouse_text='чюпеп',
+                logistic=f"{order.warehouse_name}➡{order.region_name}",
+                warehouse_text=order.stocks,
             )
             clean_text = await self._clean_text(text)
 
@@ -126,6 +127,7 @@ class WBService:
 
             order.total_today, order.total_yesterday = await uow.wb_orders.get_totals_combined(
                 user_id, order.id, order.nm_id, order.date, total_price)
+            order.stocks = await uow.wb_stocks.stock_stats(order.nm_id)
 
     async def _get_photo(self, nm_id: int):
         photo_url = await self._get_working_photo_url(nm_id)

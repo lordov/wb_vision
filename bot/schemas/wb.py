@@ -53,6 +53,7 @@ class NotifOrder(OrderWBCreate):
     amount: int | None = None
     total_today: int | None = None
     total_yesterday: int | None = None
+    stocks: str | None = None
 
 class SalesWBCreate(BaseModel):
     date: datetime
