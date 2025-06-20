@@ -49,25 +49,6 @@ def container_dep(context: Annotated[Context, TaskiqDepends()]) -> DependencyCon
     return context.state.container
 
 
-@broker.task(task_name="my_task")
-async def my_task(chat_id: int, bot: Bot = TaskiqDepends()) -> None:
-    print("I'm a task")
-    await asyncio.sleep(4)
-    await bot.send_message(chat_id, "task completed")
-
-
-@broker.task
-async def add_one(
-    value: int,
-    container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
-) -> int:
-    print(f"Executing add_one with value={value}")
-    bot = container.bot
-    await bot.send_message(settings.bot.admin_id, f"Executing add_one with value={value}")
-    await asyncio.sleep(1)
-    return value * value
-
-
 @broker.task
 async def pre_load_orders(
     telegram_id: int,
@@ -152,11 +133,10 @@ async def start_notif_pipline(container: Annotated[DependencyContainer, TaskiqDe
     for key in available_keys:
         # Регистрируем начало пайплайна для пользователя
         if await task_control.start_task(key.user_id, TaskName.START_NOTIF_PIPELINE):
-            await fetch_and_save_orders_for_key(
+            await fetch_and_save_orders_for_key.kiq(
                 user_id=key.user_id,
                 api_key=key.key_encrypted,
                 telegram_id=key.telegram_id,
-                container=container
             )
             started_pipelines += 1
         else:
@@ -190,7 +170,7 @@ async def fetch_and_save_orders_for_key(
         return
 
     if texts:
-        await notify_user_about_orders(telegram_id, texts, user_id, container=container)
+        await notify_user_about_orders.kiq(telegram_id, texts, user_id)
 
 
 @broker.task()

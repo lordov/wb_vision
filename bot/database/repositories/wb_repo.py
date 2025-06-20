@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Optional, Type
-from sqlalchemy import Date, Numeric, cast, func, select, text
+from sqlalchemy import Date, Numeric, cast, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
