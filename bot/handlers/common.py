@@ -1,7 +1,7 @@
-from aiogram import Bot, Router
+from aiogram import Bot, Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command, CommandStart, CommandObject
-from aiogram.types import Message, BotCommand
+from aiogram.types import Message, BotCommand, CallbackQuery
 
 from aiogram_dialog import DialogManager, StartMode
 
@@ -9,6 +9,7 @@ from fluentogram import TranslatorRunner
 
 from bot.core.dependency.container import DependencyContainer
 from bot.services.users import UserService
+from .kbd.keyboards import lk_main_button
 from .states import UserPanel, Support
 from bot.core.config import settings
 from broker import start_load_stocks, start_notif_pipline
@@ -59,7 +60,7 @@ async def start_with_deeplink(
         if owner.telegram_id == message.from_user.id:
             await message.answer(i18n.get("self-error"))
             return
-        
+
         if inviate is None:
             await message.answer(i18n.get("wrong-link"))
             return
@@ -108,8 +109,14 @@ async def task(
 
 @router.message(Command('support'))
 async def support_message(message: Message, i18n: TranslatorRunner, state: FSMContext):
+    keyboard = lk_main_button(i18n)
     await state.set_state(Support.question)
-    await message.answer(i18n.get('support-message'))
+    await message.answer(i18n.get('support-message'), reply_markup=keyboard)
+
+
+@router.callback_query(F.data == 'lk_main')
+async def lk_main(callback: CallbackQuery, dialog_manager: DialogManager):
+    await dialog_manager.start(UserPanel.start, mode=StartMode.RESET_STACK)
 
 
 @router.message(Support.question)
@@ -119,6 +126,7 @@ async def question_from_user(
     state: FSMContext,
     bot: Bot
 ):
+
     user = message.from_user
     user_label = f"@{user.username}" if user.username else f"id: {user.id}"
 
@@ -131,14 +139,14 @@ async def question_from_user(
     caption = i18n.get(
         'support-from-user',
         user_id=user_label,
-        message=message.text or "📎 Мультимедиа сообщение"
+        message=message.text or message.caption or "📎 Мультимедиа сообщение"
     )
 
     # Обрабоотку медиа груп необходимо предоставить
     if message.photo:
         await bot.send_photo(
             settings.bot.admin_id,
-            photo=message.photo[-1].file_id,  # самое большое
+            photo=message.photo[-1].file_id,
             caption=caption
         )
     elif message.document:
