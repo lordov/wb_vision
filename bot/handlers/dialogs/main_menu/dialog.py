@@ -12,14 +12,14 @@ user_panel = Dialog(
     Window(
         Format('{lk_start}'),
         Group(
-            Column(
-                Start(
-                    Format('{lk_settings}'),
-                    id='lk_settings',
-                    state=UserPanel.settings,
-                    mode=StartMode.NORMAL
-                )
-            ),
+            # Column(
+            #     Start(
+            #         Format('{lk_settings}'),
+            #         id='lk_settings',
+            #         state=UserPanel.settings,
+            #         mode=StartMode.NORMAL
+            #     )
+            # ),
             Column(
                 Start(
                     Format('{lk_api_key}'),

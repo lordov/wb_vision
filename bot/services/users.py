@@ -64,7 +64,7 @@ class UserService:
 
     async def delete_employee(self, telegram_id: int, employee_id: int) -> None:
         owner = await self.users.get_by_tg_id(telegram_id)
-        await self.employee.deactivate_employee(owner.id, employee_id)
+        await self.employee.delete_employee_by_id(owner.id, employee_id)
         await self.uow.commit()
         app_logger.info(
-            "employee.deactivated", owner_id=owner.id, employee_id=employee_id)
+            "employee.deleted", owner_id=owner.id, employee_id=employee_id)

@@ -11,7 +11,7 @@ from bot.core.dependency.container import DependencyContainer
 from bot.services.users import UserService
 from .states import UserPanel, Support
 from bot.core.config import settings
-from broker import my_task, start_load_stocks, start_notif_pipline
+from broker import start_load_stocks, start_notif_pipline
 
 
 router = Router()

@@ -134,7 +134,7 @@ class EmployeeRepository(SQLAlchemyRepository[Employee]):
                 "employee.fetching.failed", owner_id=owner_id, error=str(e))
         return employeers
 
-    async def deactivate_employee(self, owner_id: int, employee_id: int) -> None:
+    async def delete_employee_by_id(self, owner_id: int, employee_id: int) -> None:
         stmt = select(Employee).where(
             Employee.id == employee_id,
             Employee.owner_id == owner_id
@@ -142,9 +142,23 @@ class EmployeeRepository(SQLAlchemyRepository[Employee]):
         try:
             result = await self.session.execute(stmt)
             employee = result.scalar_one_or_none()
+            if employee:
+                await self.session.delete(employee)
+                db_logger.info(
+                    "employee.deleted", owner_id=owner_id, employee_id=employee_id)
         except SQLAlchemyError as e:
             db_logger.error(
-                "employee.deactivate.failed", owner_id=owner_id, error=str(e))
-        employee.is_active = False
-        db_logger.info(
-            "employee.deactivated", owner_id=owner_id, employee_id=employee_id)
+                "employee.delete.failed", owner_id=owner_id, error=str(e))
+
+    async def delete_all_employees(self, owner_id: int) -> None:
+        stmt = select(Employee).where(Employee.owner_id == owner_id)
+        try:
+            result = await self.session.execute(stmt)
+            employees = result.scalars().all()
+            for employee in employees:
+                await self.session.delete(employee)
+            db_logger.info(
+                "employee.deleted", owner_id=owner_id)
+        except SQLAlchemyError as e:
+            db_logger.error(
+                "employee.delete.failed", owner_id=owner_id, error=str(e))

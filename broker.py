@@ -19,14 +19,15 @@ from bot.services.task_control import TaskControlService, TaskName
 from bot.core.logging import app_logger
 
 
+# Разделение стримов для ручных задач и задач, запускаемых по расписанию
 broker = PullBasedJetStreamBroker(
     settings.nats.url,
     stream_name="taskiq_jetstream",
     durable="wb_tasks",
     consumer_config=ConsumerConfig(
         ack_wait=60 * 5,
+        max_deliver=2,
     ),
-
 ).with_result_backend(NATSObjectStoreResultBackend(settings.nats.url))
 taskiq_aiogram.init(
     broker,
