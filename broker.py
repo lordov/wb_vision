@@ -25,8 +25,9 @@ broker = PullBasedJetStreamBroker(
     stream_name="taskiq_jetstream",
     durable="wb_tasks",
     consumer_config=ConsumerConfig(
-        ack_wait=60 * 5,
+        ack_wait=60 * 5,  # Уменьшаем время ожидания до 5 минут
         max_deliver=2,
+        max_ack_pending=3
     ),
 ).with_result_backend(NATSObjectStoreResultBackend(settings.nats.url))
 taskiq_aiogram.init(
@@ -106,8 +107,14 @@ async def load_stocks(
 ):
     wb_service = await container.get(WBService)
     task_control = await container.get(TaskControlService)
-    await wb_service.load_stocks(user_id, api_key)
-    await task_control.complete_task(user_id, TaskName.LOAD_STOCKS, success=True)
+    
+    try:
+        await wb_service.load_stocks(user_id, api_key)
+        await task_control.complete_task(user_id, TaskName.LOAD_STOCKS, success=True)
+    except Exception as e:
+        app_logger.error(f'Load stocks failed for user {user_id}: {e}')
+        await task_control.complete_task(user_id, TaskName.LOAD_STOCKS, success=False, error_message=str(e))
+        raise
 
 
 @broker.task(schedule=[{"cron": "*/10 * * * *"}])

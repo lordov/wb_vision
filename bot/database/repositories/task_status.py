@@ -172,8 +172,8 @@ class TaskStatusRepository(SQLAlchemyRepository[TaskStatus]):
             )
             return False
 
-    async def get_users_without_active_tasks(self, task_names: list[str]) -> list[int]:
-        """Получить список user_id пользователей без активных задач из указанного списка."""
+    async def get_users_with_active_tasks(self, task_names: list[str]) -> list[int]:
+        """Получить список user_id пользователей с активными задачами из указанного списка."""
         # Подзапрос для получения пользователей с активными задачами
         subquery = select(TaskStatus.user_id).where(
             TaskStatus.task_name.in_(task_names),
@@ -186,7 +186,7 @@ class TaskStatusRepository(SQLAlchemyRepository[TaskStatus]):
             return users_with_active_tasks
         except SQLAlchemyError as e:
             db_logger.error(
-                f"Error getting users without active tasks: {e}",
+                f"Error getting users with active tasks: {e}",
                 task_names=task_names,
                 error=str(e)
             )

@@ -128,7 +128,7 @@ class WBService:
 
             order.total_today, order.total_yesterday = await uow.wb_orders.get_totals_combined(
                 user_id, order.id, order.nm_id, order.date, total_price)
-            order.stocks = await uow.wb_stocks.stock_stats(order.nm_id)
+            order.stocks = await uow.wb_stocks.stock_stats(user_id, order.nm_id)
 
     async def _get_photo(self, nm_id: int):
         photo_url = await self._get_working_photo_url(nm_id)

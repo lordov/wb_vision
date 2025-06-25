@@ -219,7 +219,7 @@ class TaskControlService:
         """
         async with self.uow as uow:
             task_name_values = [task.value for task in task_names]
-            return await uow.task_status.get_users_without_active_tasks(task_name_values)
+            return await uow.task_status.get_users_with_active_tasks(task_name_values)
 
     async def cleanup_old_tasks(self, days_old: int = 7) -> int:
         """

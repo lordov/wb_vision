@@ -297,7 +297,7 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
             db_logger.error(f"Error in get_totals_combined: {e}")
             return 0, 0
 
-    async def stock_stats(self, nm_id: str) -> Optional[str]:
+    async def stock_stats(self, user_id: int, nm_id: str) -> Optional[str]:
         """
         Получает количество единиц товара на каждом складе по артикулу товара (nmId) 
         с группировкой по складу и дате изменения.
@@ -311,6 +311,7 @@ class WBRepository(SQLAlchemyRepository[OrdersWB]):
                     StocksWB.last_change_date
                 )
                 .where(
+                    StocksWB.user_id == user_id,
                     StocksWB.nm_id == nm_id,
                     StocksWB.quantity.is_not(None)
                 )
