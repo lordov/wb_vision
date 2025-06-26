@@ -85,13 +85,13 @@ async def cmd_start(
     i18n: TranslatorRunner,
     container: DependencyContainer,
 ):
-    async with await container.create_uow() as uow:
-        await uow.users.add_user(
-            message.from_user.id,
-            message.from_user.username,
-            message.from_user.language_code
-        )
-        await message.answer(i18n.get('hello-message'))
+    user_service = await container.get(UserService)
+    await user_service.add_user(
+        message.from_user.id,
+        message.from_user.username,
+        message.from_user.language_code
+    )
+    await message.answer(i18n.get('hello-message'))
 
 
 @router.message(Command('lk'))

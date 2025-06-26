@@ -1,6 +1,5 @@
 import asyncio
 import taskiq_aiogram
-from aiogram import Bot
 
 from typing import Annotated
 from taskiq import Context, TaskiqDepends, TaskiqEvents, TaskiqScheduler, TaskiqState
@@ -76,7 +75,9 @@ async def pre_load_orders(
 
 
 @broker.task(schedule=[{"cron": "*/30 * * * *"}])
-async def start_load_stocks(container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]):
+async def start_load_stocks(
+    container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
+):
     api_service = await container.get(ApiKeyService)
     task_control = await container.get(TaskControlService)
 
@@ -107,18 +108,21 @@ async def load_stocks(
 ):
     wb_service = await container.get(WBService)
     task_control = await container.get(TaskControlService)
-    
+
     try:
         await wb_service.load_stocks(user_id, api_key)
         await task_control.complete_task(user_id, TaskName.LOAD_STOCKS, success=True)
     except Exception as e:
         app_logger.error(f'Load stocks failed for user {user_id}: {e}')
-        await task_control.complete_task(user_id, TaskName.LOAD_STOCKS, success=False, error_message=str(e))
+        await task_control.complete_task(
+            user_id, TaskName.LOAD_STOCKS, success=False, error_message=str(e))
         raise
 
 
 @broker.task(schedule=[{"cron": "*/10 * * * *"}])
-async def start_notif_pipline(container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]) -> None:
+async def start_notif_pipline(
+    container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
+) -> None:
     api_service = await container.get(ApiKeyService)
     task_control = await container.get(TaskControlService)
 
@@ -167,18 +171,24 @@ async def fetch_and_save_orders_for_key(
 ):
     service = await container.get(WBService)
     task_control = await container.get(TaskControlService)
+    try:
+        texts = await service.fetch_and_save_orders(api_key=api_key, user_id=user_id)
 
-    texts = await service.fetch_and_save_orders(api_key=api_key, user_id=user_id)
+        if not texts:
+            app_logger.info(
+                f'No new orders for user {user_id}, completing pipeline')
+            # Завершаем пайплайн, так как нет новых заказов
+            await task_control.complete_task(user_id, TaskName.START_NOTIF_PIPELINE, success=True)
+            return
 
-    if not texts:
-        app_logger.info(
-            f'No new orders for user {user_id}, completing pipeline')
-        # Завершаем пайплайн, так как нет новых заказов
-        await task_control.complete_task(user_id, TaskName.START_NOTIF_PIPELINE, success=True)
-        return
-
-    if texts:
-        await notify_user_about_orders.kiq(telegram_id, texts, user_id)
+        if texts:
+            await notify_user_about_orders.kiq(telegram_id, texts, user_id)
+    except Exception as e:
+        app_logger.error(
+            f'Fetch and save orders failed for user {user_id}: {e}')
+        await task_control.complete_task(
+            user_id, TaskName.START_NOTIF_PIPELINE, success=False, error_message=str(e))
+        raise
 
 
 @broker.task()
@@ -212,10 +222,15 @@ async def notify_user_about_orders(
 
     except Exception as e:
         app_logger.error(f'Notification failed for user {user_id}: {e}')
+        await task_control.complete_task(
+            user_id, TaskName.START_NOTIF_PIPELINE, success=False, error_message=str(e))
+        raise
 
 
 @broker.task(schedule=[{"cron": "0 2 * * *"}])  # Каждый день в 2:00
-async def cleanup_old_tasks(container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]) -> None:
+async def cleanup_old_tasks(
+    container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
+) -> None:
     """Очистка старых завершенных задач."""
     task_control = await container.get(TaskControlService)
     cleaned_count = await task_control.cleanup_old_tasks(days_old=7)
