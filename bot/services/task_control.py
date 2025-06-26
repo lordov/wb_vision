@@ -7,7 +7,7 @@ from bot.core.logging import app_logger
 
 class TaskName(Enum):
     """Enum для названий задач."""
-    PRE_LOAD_ORDERS = "pre_load_orders"
+    PRE_LOAD_INFO = "pre_load_info"
     START_NOTIF_PIPELINE = "start_notif_pipeline"
     LOAD_STOCKS = "load_stocks"
 
@@ -17,7 +17,7 @@ class TaskControlService:
 
     # Определяем зависимости между задачами
     TASK_CONFLICTS = {
-        TaskName.START_NOTIF_PIPELINE: [TaskName.PRE_LOAD_ORDERS, TaskName.START_NOTIF_PIPELINE],
+        TaskName.START_NOTIF_PIPELINE: [TaskName.PRE_LOAD_INFO, TaskName.START_NOTIF_PIPELINE],
         TaskName.LOAD_STOCKS: [TaskName.LOAD_STOCKS],
     }
 

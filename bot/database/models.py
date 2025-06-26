@@ -126,6 +126,12 @@ class OrdersWB(Base):
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
     date: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, index=True)
     last_change_date: Mapped[datetime] = mapped_column(
@@ -163,12 +169,6 @@ class OrdersWB(Base):
     warehouse_type: Mapped[str] = mapped_column(
         String(60), nullable=True, comment="Тип склада")
 
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True
-    )
-
     user: Mapped["User"] = relationship(back_populates="orders")
 
     __table_args__ = (UniqueConstraint(
@@ -181,6 +181,11 @@ class SalesWB(Base):
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
     date: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, index=True)
     last_change_date: Mapped[datetime] = mapped_column(
@@ -219,11 +224,6 @@ class SalesWB(Base):
     srid: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
     warehouse_type: Mapped[str] = mapped_column(String(255), nullable=True)
 
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True
-    )
 
     __table_args__ = (UniqueConstraint(
         'date', 'user_id', 'srid', 'nm_id', 'tech_size',
@@ -235,6 +235,11 @@ class StocksWB(Base):
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
     last_change_date: Mapped[datetime] = mapped_column(DateTime, index=True)
     supplier_article: Mapped[str] = mapped_column(
         String(75), nullable=False, index=True)
@@ -254,12 +259,6 @@ class StocksWB(Base):
     sc_code: Mapped[str] = mapped_column(String(50), nullable=True)
     price: Mapped[Decimal] = mapped_column(Numeric(15, 2))
     discount: Mapped[Decimal] = mapped_column(Numeric(5, 2))
-
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True
-    )
 
     __table_args__ = (UniqueConstraint(
         'user_id', 'warehouse_name', 'nm_id',

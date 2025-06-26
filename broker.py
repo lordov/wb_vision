@@ -51,7 +51,7 @@ def container_dep(context: Annotated[Context, TaskiqDepends()]) -> DependencyCon
 
 
 @broker.task
-async def pre_load_orders(
+async def pre_load_info(
     telegram_id: int,
     container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
 ):
@@ -63,15 +63,16 @@ async def pre_load_orders(
     user_id = api_key.user_id
 
     # Проверяем и регистрируем задачу
-    if not await task_control.start_task(user_id, TaskName.PRE_LOAD_ORDERS):
+    if not await task_control.start_task(user_id, TaskName.PRE_LOAD_INFO):
         app_logger.info(f'Pre-load orders task blocked for user {user_id}')
         return
 
-    app_logger.info(f'Pre-loaded orders for {telegram_id}')
+    app_logger.info(f'Pre-loaded info for {telegram_id}')
     await wb_service.pre_load_orders(user_id, api_key.key_encrypted)
+    await wb_service.load_stocks(user_id, api_key.key_encrypted)
 
     # Отмечаем задачу как завершенную
-    await task_control.complete_task(user_id, TaskName.PRE_LOAD_ORDERS, success=True)
+    await task_control.complete_task(user_id, TaskName.PRE_LOAD_INFO, success=True)
 
 
 @broker.task(schedule=[{"cron": "*/30 * * * *"}])
