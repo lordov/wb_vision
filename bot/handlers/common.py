@@ -9,6 +9,7 @@ from fluentogram import TranslatorRunner
 
 from bot.core.dependency.container import DependencyContainer
 from bot.services.users import UserService
+from bot.database.uow import UnitOfWork
 from .kbd.keyboards import lk_main_button
 from .states import UserPanel, Support
 from bot.core.config import settings
@@ -37,10 +38,11 @@ async def start_with_deeplink(
     message: Message,
     i18n: TranslatorRunner,
     command: CommandObject,
-    container: DependencyContainer
+    container: DependencyContainer,
+    uow: UnitOfWork
 ):
     bot = message.bot
-    user_service = await container.get(UserService)
+    user_service = container.get_user_service(uow)
     username = message.from_user.username
     await user_service.add_user(
         telegram_id=message.from_user.id,
@@ -84,8 +86,9 @@ async def cmd_start(
     message: Message,
     i18n: TranslatorRunner,
     container: DependencyContainer,
+    uow: UnitOfWork
 ):
-    user_service = await container.get(UserService)
+    user_service = container.get_user_service(uow)
     await user_service.add_user(
         message.from_user.id,
         message.from_user.username,

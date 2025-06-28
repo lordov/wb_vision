@@ -19,6 +19,7 @@ from bot.core.logging import db_logger
 class UnitOfWork:
     def __init__(self, session: AsyncSession):
         self.session = session
+        self._closed = False
         self.users = UserRepository(session)
         self.api_keys = WbApiKeyRepository(session)
         self.subscriptions = SubscriptionRepository(session)
@@ -32,32 +33,58 @@ class UnitOfWork:
         self.payments = SQLAlchemyRepository[Payment](session, Payment)
 
     async def commit(self):
-        await self.session.commit()
+        """Коммит транзакции."""
+        if not self._closed and self.session.is_active:
+            await self.session.commit()
+            db_logger.debug("Transaction committed")
 
     async def rollback(self):
-        await self.session.rollback()
+        """Откат транзакции."""
+        if not self._closed and self.session.is_active:
+            await self.session.rollback()
+            db_logger.debug("Transaction rolled back")
 
     async def close(self):
-        await self.session.close()
+        """Закрытие сессии."""
+        if not self._closed:
+            await self.session.close()
+            self._closed = True
+            db_logger.debug("Session closed")
 
     async def __aenter__(self):
         """Вход в контекстный менеджер."""
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        """Выход из контекстного менеджера. Закрываем сессию."""
-        await self.session.close()
-        db_logger.info('сессия закрыта')
+        """Выход из контекстного менеджера."""
+        try:
+            if exc_type is not None:
+                # Если была ошибка, откатываем транзакцию
+                await self.rollback()
+                db_logger.error(f"Exception in UoW context: {exc_type.__name__}: {exc}")
+            else:
+                # Если ошибок не было, коммитим
+                await self.commit()
+        except Exception as e:
+            db_logger.error(f"Error in UoW __aexit__: {e}")
+            try:
+                await self.rollback()
+            except Exception as rollback_error:
+                db_logger.error(f"Error during rollback: {rollback_error}")
+        finally:
+            await self.close()
 
 
 @asynccontextmanager
 async def get_uow(session: AsyncSession) -> AsyncIterator[UnitOfWork]:
+    """Контекстный менеджер для создания UoW."""
     uow = UnitOfWork(session)
     try:
         yield uow
         await uow.commit()
-    except Exception:
+    except Exception as e:
         await uow.rollback()
+        db_logger.error(f"Error in get_uow: {e}")
         raise
     finally:
         await uow.close()

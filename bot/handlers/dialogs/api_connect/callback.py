@@ -77,7 +77,7 @@ async def delete_api_key(
     user = message.from_user
     api_key_service = ApiKeyService(uow, fernet=fernet)
     try:
-        await api_key_service.disable_key(user.id)
+        await api_key_service.delete_key(user.id)
         await message.answer(i18n.get("api-key-deleted"))
         await dialog_manager.switch_to(ApiPanel.start)
         app_logger.info("API Key deleted", user_id=user.id)

@@ -29,7 +29,6 @@ class DependencyContainer:
         self._i18n = i18n
 
         self._bot: Bot | None = None
-        self._services: dict[Type, object] = {}
 
     @property
     def bot(self) -> Bot:
@@ -38,46 +37,51 @@ class DependencyContainer:
         return self._bot
 
     async def create_uow(self) -> UnitOfWork:
+        """Создает новый UoW для использования вне middleware (например, в брокерах)."""
         return UnitOfWork(self._session_maker())
 
-    async def get(self, service_type: Type[T]) -> T:
-        if service_type in self._services:
-            return self._services[service_type]
+    def get_notification_service(self, uow: UnitOfWork) -> NotificationService:
+        """Создает NotificationService с переданным UoW."""
+        return NotificationService(uow=uow, i18n=self._i18n, bot=self.bot)
 
-        instance = await self._build(service_type)
-        self._services[service_type] = instance
-        return instance
+    def get_api_key_service(self, uow: UnitOfWork) -> ApiKeyService:
+        """Создает ApiKeyService с переданным UoW."""
+        return ApiKeyService(uow=uow, fernet=self._fernet)
+
+    def get_subscription_service(self, uow: UnitOfWork) -> SubscriptionService:
+        """Создает SubscriptionService с переданным UoW."""
+        return SubscriptionService(uow=uow)
+
+    def get_wb_service(self, uow: UnitOfWork) -> WBService:
+        """Создает WBService с переданным UoW."""
+        notification_service = self.get_notification_service(uow)
+        api_key_service = self.get_api_key_service(uow)
+        return WBService(
+            uow=uow,
+            i18n=self._i18n,
+            notification_service=notification_service,
+            api_key_service=api_key_service,
+        )
+
+    def get_user_service(self, uow: UnitOfWork) -> UserService:
+        """Создает UserService с переданным UoW."""
+        return UserService(uow=uow)
+        
+    def get_task_control_service(self, uow: UnitOfWork) -> TaskControlService:
+        """Создает TaskControlService с переданным UoW."""
+        return TaskControlService(uow=uow)
+
+    # Deprecated methods - оставляем для обратной совместимости
+    async def get(self, service_type: Type[T]) -> T:
+        """Deprecated: используйте get_*_service методы с явным UoW."""
+        if service_type in [NotificationService, ApiKeyService, SubscriptionService, 
+                           WBService, UserService, TaskControlService]:
+            raise ValueError(
+                f"Service {service_type.__name__} requires UoW. "
+                f"Use get_{service_type.__name__.lower().replace('service', '_service')} method instead."
+            )
+        raise ValueError(f"Unknown service: {service_type}")
 
     async def _build(self, service_type: Type[T]) -> T:
-        if service_type is NotificationService:
-            return NotificationService(
-                uow=await self.create_uow(), i18n=self._i18n, bot=self.bot)
-
-        elif service_type is ApiKeyService:
-            uow = await self.create_uow()
-            return ApiKeyService(uow=uow, fernet=self._fernet)
-
-        elif service_type is SubscriptionService:
-            uow = await self.create_uow()
-            return SubscriptionService(uow=uow)
-
-        elif service_type is WBService:
-            uow = await self.create_uow()
-            notification_service = await self.get(NotificationService)
-            api_key_service = await self.get(ApiKeyService)
-            return WBService(
-                uow=uow,
-                i18n=self._i18n,
-                notification_service=notification_service,
-                api_key_service=api_key_service,
-            )
-
-        elif service_type is UserService:
-            uow = await self.create_uow()
-            return UserService(uow=uow)
-            
-        elif service_type is TaskControlService:
-            uow = await self.create_uow()
-            return TaskControlService(uow=uow)
-
-        raise ValueError(f"Unknown service: {service_type}")
+        """Deprecated: используйте get_*_service методы с явным UoW."""
+        raise ValueError("This method is deprecated. Use get_*_service methods instead.")

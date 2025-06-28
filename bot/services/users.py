@@ -19,20 +19,18 @@ class UserService:
         return await self.users.get_by_user_id(user_id)
 
     async def generate_employee_invite(self, telegram_id: int) -> str:
-        async with self.uow as uow:
-            token = secrets.token_hex(16)
-            owner = await self.users.get_by_tg_id(telegram_id)
-            invate = await self.employee_invite.add_invite(token, owner.id)
+        token = secrets.token_hex(16)
+        owner = await self.users.get_by_tg_id(telegram_id)
+        invate = await self.employee_invite.add_invite(token, owner.id)
 
-            if not invate:
-                app_logger.error("Error adding employee invite")
-                return None
+        if not invate:
+            app_logger.error("Error adding employee invite")
+            return None
 
-            await self.uow.commit()
-            app_logger.info(
-                "generate_employee_invite", owner_id=owner.id, token=token)
+        app_logger.info(
+            "generate_employee_invite", owner_id=owner.id, token=token)
 
-            return f"t.me/{settings.bot.username}?start=addstaff_{owner.id}_{token}"
+        return f"t.me/{settings.bot.username}?start=addstaff_{owner.id}_{token}"
 
     async def check_invite(self, owner_id: int, token: str) -> EmployeeInvite | None:
         return await self.employee_invite.check_invite(owner_id, token)
@@ -41,22 +39,17 @@ class UserService:
         return await self.employee.check_user_as_employee(telegram_id)
 
     async def add_employee(self, owner_id: int, telegram_id: int, username: str, token: str) -> Employee | None:
-        async with self.uow:
-            new_employee = await self.employee.add_employee(owner_id, telegram_id, username)
-            if new_employee is None:
-                return
-            await self.employee_invite.set_is_used_link(token)
-            app_logger.info(
-                "employee.added", owner_id=owner_id, telegram_id=telegram_id, username=username)
-            await self.uow.commit()
-            return new_employee
+        new_employee = await self.employee.add_employee(owner_id, telegram_id, username)
+        if new_employee is None:
+            return
+        await self.employee_invite.set_is_used_link(token)
+        app_logger.info(
+            "employee.added", owner_id=owner_id, telegram_id=telegram_id, username=username)
+        return new_employee
 
     async def add_user(self, telegram_id: int, username: str, locale: str = "ru") -> User | None:
         user = await self.users.add_user(telegram_id, username, locale)
-        if user:
-            await self.uow.commit()
-            return user
-        return None
+        return user
 
     async def get_active_employees(self, telegram_id: int) -> list[Employee] | None:
         owner = await self.users.get_by_tg_id(telegram_id)
@@ -65,6 +58,5 @@ class UserService:
     async def delete_employee(self, telegram_id: int, employee_id: int) -> None:
         owner = await self.users.get_by_tg_id(telegram_id)
         await self.employee.delete_employee_by_id(owner.id, employee_id)
-        await self.uow.commit()
         app_logger.info(
             "employee.deleted", owner_id=owner.id, employee_id=employee_id)

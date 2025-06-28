@@ -37,24 +37,21 @@ class WBService:
         if not orders:
             return
 
-        async with self.uow as uow:
-            new_orders = await self.uow.wb_orders.add_orders_bulk(orders=orders)
-            app_logger.info(
-                f"{len(new_orders)} new orders added for {user_id} ")
+        new_orders = await self.uow.wb_orders.add_orders_bulk(orders=orders)
+        app_logger.info(
+            f"{len(new_orders)} new orders added for {user_id} ")
 
-            if not new_orders:
-                app_logger.info(f"No new orders for {user_id}")
-                return
+        if not new_orders:
+            app_logger.info(f"No new orders for {user_id}")
+            return
 
-            await self._get_stats(uow, user_id, new_orders)
+        await self._get_stats(self.uow, user_id, new_orders)
 
-            await self.uow.commit()
+        # Сортируем заказы
+        new_orders = sorted(new_orders, key=lambda x: x.counter)
 
-            # Сортируем заказы
-            new_orders = sorted(new_orders, key=lambda x: x.counter)
-
-            # Генерируем тексты на основе обновлённых заказов
-            texts = await self._generate_texts(orders=new_orders)
+        # Генерируем тексты на основе обновлённых заказов
+        texts = await self._generate_texts(orders=new_orders)
 
         return texts
 
@@ -63,19 +60,17 @@ class WBService:
         api_client = WBAPIClient(token=api_key)
         date_from = datetime.now() - timedelta(days=90)
         orders = await api_client.get_orders(user_id, date_from)
-        async with self.uow:
-            await self.uow.wb_orders.add_orders_bulk(orders=orders)
-            await self.uow.commit()
-            app_logger.info(
-                f"Pre-loaded orders: {user_id} {len(orders)} ")
+        
+        await self.uow.wb_orders.add_orders_bulk(orders=orders)
+        app_logger.info(
+            f"Pre-loaded orders: {user_id} {len(orders)} ")
 
     async def load_stocks(self, user_id: int, api_key: str) -> None:
         api_client = WBAPIClient(token=api_key)
         stocks = await api_client.get_stocks(user_id)
-        async with self.uow:
-            await self.uow.wb_stocks.add_stocks_bulk(stocks=stocks)
-            await self.uow.commit()
-            app_logger.info(f"Loaded stocks: {user_id} {len(stocks)} ")
+        
+        await self.uow.wb_stocks.add_stocks_bulk(stocks=stocks)
+        app_logger.info(f"Loaded stocks: {user_id} {len(stocks)} ")
 
     async def _generate_texts(self, orders: list[NotifOrder]) -> list[dict]:
         result = []

@@ -3,6 +3,7 @@ from aiogram_dialog import DialogManager
 from fluentogram import TranslatorRunner
 from bot.core.dependency.container import DependencyContainer
 from bot.services.users import UserService
+from bot.database.uow import UnitOfWork
 
 
 async def employee_start(
@@ -10,9 +11,10 @@ async def employee_start(
     i18n: TranslatorRunner,
     event_from_user: User,
     container: DependencyContainer,
+    uow: UnitOfWork,
     **kwargs
 ) -> dict:
-    user_service = await container.get(UserService)
+    user_service = container.get_user_service(uow)
     employees = await user_service.get_active_employees(event_from_user.id)
     count_employees = len(employees)
 
@@ -31,9 +33,10 @@ async def employee_delete(
     i18n: TranslatorRunner,
     event_from_user: User,
     container: DependencyContainer,
+    uow: UnitOfWork,
     **kwargs
 ):
-    user_service = await container.get(UserService)
+    user_service = container.get_user_service(uow)
     employees = await user_service.get_active_employees(event_from_user.id)
     employee_choices = [(emp.username, emp.id) for emp in employees]
 
@@ -49,9 +52,10 @@ async def employee_link(
     i18n: TranslatorRunner,
     event_from_user: User,
     container: DependencyContainer,
+    uow: UnitOfWork,
     **kwargs
 ) -> dict:
-    user_service = await container.get(UserService)
+    user_service = container.get_user_service(uow)
     link = await user_service.generate_employee_invite(event_from_user.id)
     return {
         'back': i18n.get('back-btn'),

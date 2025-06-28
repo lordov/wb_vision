@@ -2,7 +2,7 @@ from aiogram.types import User
 from aiogram_dialog import DialogManager
 from fluentogram import TranslatorRunner
 from bot.core.dependency.container import DependencyContainer
-from bot.services.api_key import ApiKeyService
+from bot.database.uow import UnitOfWork
 
 
 async def api_start(
@@ -10,11 +10,11 @@ async def api_start(
     i18n: TranslatorRunner,
     event_from_user: User,
     container: DependencyContainer,
+    uow: UnitOfWork,
     **kwargs
 ) -> dict:
-    async with await container.create_uow():
-        api_key_service = await container.get(ApiKeyService)
-        key = await api_key_service.get_user_key(event_from_user.id)
+    api_key_service = container.get_api_key_service(uow)
+    key = await api_key_service.get_user_key(event_from_user.id)
 
     has_key = key is not None
     status = "delete" if has_key else "set"

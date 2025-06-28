@@ -18,6 +18,7 @@ class ApiKeyService:
         self.api_key = uow.api_keys
         self.users = uow.users
         self.employee = uow.employee
+        self.task_status = uow.task_status
         self.fernet = fernet
 
     async def get_user_key(self, telegram_id: int) -> ApiKeyWithTelegramDTO:
@@ -80,12 +81,14 @@ class ApiKeyService:
         encrypted = self.fernet.encrypt(raw_key.encode()).decode()
         await self.api_key.upsert_key(user_id, title, encrypted, is_active=is_active)
 
-    async def disable_key(self, telegram_id: int):
+    async def delete_key(self, telegram_id: int):
         user = await self.users.get_by_tg_id(telegram_id)
         if not user:
             raise ValueError("User not found")
         await self.api_key.delete_user_keys(user.id)
+        # Подумать над правильным удалением сотрудников
         await self.employee.delete_all_employees(user.id)
+        await self.task_status.delete_all_tasks(user.id)
         await self.uow.commit()
 
     async def validate_wb_api_key(self, key: str) -> bool:
