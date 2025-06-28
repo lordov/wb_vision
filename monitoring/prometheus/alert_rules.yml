@@ -1,0 +1,64 @@
+groups:
+  - name: taskiq_broker_alerts
+    rules:
+      # Алерт при высокой нагрузке на брокер
+      - alert: HighTaskRate
+        expr: rate(received_tasks_total[5m]) > 100
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокая нагрузка на TaskIQ брокер"
+          description: "Скорость получения задач превышает 100 задач в минуту более 2 минут"
+
+      # Алерт при долгом выполнении задач
+      - alert: SlowTaskExecution
+        expr: histogram_quantile(0.95, rate(execution_time_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Медленное выполнение задач"
+          description: "95-й перцентиль времени выполнения задач превышает 30 секунд"
+
+      # Алерт при высокой частоте ошибок
+      - alert: HighErrorRate
+        expr: rate(found_errors_total[5m]) / rate(received_tasks_total[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокая частота ошибок в TaskIQ"
+          description: "Более 10% задач завершаются с ошибками"
+
+      # Алерт при критической частоте ошибок
+      - alert: CriticalErrorRate
+        expr: rate(found_errors_total[5m]) / rate(received_tasks_total[5m]) > 0.3
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Критическая частота ошибок в TaskIQ"
+          description: "Более 30% задач завершаются с ошибками"
+
+      # Алерт при недоступности брокера
+      - alert: BrokerDown
+        expr: up{job="taskiq-broker"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TaskIQ брокер недоступен"
+          description: "Брокер не отвечает на запросы более 1 минуты"
+
+  - name: nats_alerts
+    rules:
+      # Алерт при недоступности NATS
+      - alert: NATSDown
+        expr: up{job="nats"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "NATS сервер недоступен"
+          description: "NATS сервер не отвечает на запросы более 1 минуты" 

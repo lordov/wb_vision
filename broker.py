@@ -4,6 +4,7 @@ import taskiq_aiogram
 from typing import Annotated
 from taskiq import Context, TaskiqDepends, TaskiqEvents, TaskiqScheduler, TaskiqState
 from taskiq.schedule_sources import LabelScheduleSource
+from taskiq.middlewares.prometheus_middleware import PrometheusMiddleware
 from taskiq_nats import PullBasedJetStreamBroker, NATSObjectStoreResultBackend
 from nats.js.api import ConsumerConfig
 
@@ -29,6 +30,15 @@ broker = PullBasedJetStreamBroker(
         max_ack_pending=3
     ),
 ).with_result_backend(NATSObjectStoreResultBackend(settings.nats.url))
+
+broker.add_middlewares(
+    PrometheusMiddleware(
+        server_addr="0.0.0.0", 
+        server_port=9000,
+        # Путь для хранения метрик в многопроцессной среде
+        metrics_path=None  # Использует временную директорию по умолчанию
+    ),
+)
 
 taskiq_aiogram.init(
     broker,

@@ -39,15 +39,17 @@ class WBService:
 
         async with self.uow as uow:
             new_orders = await self.uow.wb_orders.add_orders_bulk(orders=orders)
-            await self.uow.commit()
             app_logger.info(
                 f"{len(new_orders)} new orders added for {user_id} ")
 
             if not new_orders:
                 app_logger.info(f"No new orders for {user_id}")
                 return
-            # Получаем
+
             await self._get_stats(uow, user_id, new_orders)
+
+            await self.uow.commit()
+
             # Сортируем заказы
             new_orders = sorted(new_orders, key=lambda x: x.counter)
 
