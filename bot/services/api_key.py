@@ -46,7 +46,7 @@ class ApiKeyService:
         app_logger.info("Getting all decrypted API keys")
         try:
             # Получаем все ключи из репозитория
-            keys = await self.api_key.get_all_keys()
+            keys = await self.api_key.get_all_active_keys()
         except Exception as e:
             app_logger.warning(f"Failed to fetch API keys: {e}")
             return []
