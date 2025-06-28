@@ -28,15 +28,16 @@ class TaskStatusRepository(SQLAlchemyRepository[TaskStatus]):
                 TaskStatus.status == "running"
             )
         )
-        
+
         if existing_task.scalar_one_or_none():
             db_logger.warning(
                 f"Task {task_name} already running for user {user_id}",
                 user_id=user_id,
                 task_name=task_name
             )
-            raise ValueError(f"Task {task_name} already running for user {user_id}")
-        
+            raise ValueError(
+                f"Task {task_name} already running for user {user_id}")
+
         task_status = TaskStatus(
             user_id=user_id,
             task_name=task_name,
@@ -218,3 +219,11 @@ class TaskStatusRepository(SQLAlchemyRepository[TaskStatus]):
         except SQLAlchemyError as e:
             db_logger.error(f"Error cleaning up old tasks: {e}", error=str(e))
             return 0
+
+    async def get_all_running_tasks(self) -> list[TaskStatus]:
+        """Получить все задачи в статусе running."""
+        stmt = select(TaskStatus).where(
+            TaskStatus.status == "running"
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().all()

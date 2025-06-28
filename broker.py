@@ -29,11 +29,13 @@ broker = PullBasedJetStreamBroker(
         max_ack_pending=3
     ),
 ).with_result_backend(NATSObjectStoreResultBackend(settings.nats.url))
+
 taskiq_aiogram.init(
     broker,
     "main:dp",
     "main:bot",
 )
+
 scheduler = TaskiqScheduler(
     broker,
     sources=[LabelScheduleSource(broker)]
@@ -44,13 +46,22 @@ scheduler = TaskiqScheduler(
 async def startup(state: TaskiqState) -> None:
     container = init_container()
     state.container = container
+    
+    # КРИТИЧЕСКИ ВАЖНО: восстанавливаем состояние после перезапуска контейнеров
+    task_control = await container.get(TaskControlService)
+    
+    # Помечаем ВСЕ задачи в статусе 'running' как failed
+    # так как после перезапуска контейнеров мы не можем знать их реальное состояние
+    recovered_count = await task_control.recover_all_running_tasks()
+    
+    app_logger.info(f"Container restart: recovered {recovered_count} running tasks")
 
 
 def container_dep(context: Annotated[Context, TaskiqDepends()]) -> DependencyContainer:
     return context.state.container
 
 
-@broker.task
+@broker.task()
 async def pre_load_info(
     telegram_id: int,
     container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]

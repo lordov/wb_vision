@@ -1,5 +1,6 @@
 from typing import Optional, Any
 from enum import Enum
+from datetime import datetime
 
 from bot.database.uow import UnitOfWork
 from bot.core.logging import app_logger
@@ -268,3 +269,36 @@ class TaskControlService:
                 }
                 for task in tasks
             ]
+
+    async def recover_all_running_tasks(self) -> int:
+        """
+        Восстановить ВСЕ задачи в статусе running после перезапуска контейнеров.
+
+        После docker-compose down/up мы не можем знать реальное состояние задач,
+        поэтому помечаем все running задачи как failed.
+        """
+        async with self.uow as uow:
+            try:
+                # Получаем все задачи в статусе running
+                running_tasks = await uow.task_status.get_all_running_tasks()
+
+                recovered_count = 0
+                for task in running_tasks:
+                    task.status = "failed"
+                    task.completed_at = datetime.now()
+                    task.error_message = "Task interrupted by container restart"
+                    recovered_count += 1
+
+                    app_logger.info(
+                        f"Recovered task after restart: {task.task_name} for user {task.user_id}",
+                        user_id=task.user_id,
+                        task_name=task.task_name
+                    )
+
+                await uow.commit()
+                return recovered_count
+
+            except Exception as e:
+                await uow.rollback()
+                app_logger.error(f"Failed to recover running tasks: {e}")
+                return 0

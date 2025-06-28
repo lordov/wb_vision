@@ -109,8 +109,8 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
         except SQLAlchemyError as e:
             raise e
 
-    async def get_all_keys(self) -> list[ApiKeyWithTelegramDTO]:
-        stmt = select(ApiKey).options(joinedload(ApiKey.user))
+    async def get_all_active_keys(self) -> list[ApiKeyWithTelegramDTO]:
+        stmt = select(ApiKey).options(joinedload(ApiKey.user)).where(ApiKey.is_active)
         try:
             result = await self.session.execute(stmt)
             api_keys: list[ApiKey] = result.scalars().all()
