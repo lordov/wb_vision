@@ -89,7 +89,6 @@ class ApiKeyService:
         # Подумать над правильным удалением сотрудников
         await self.employee.delete_all_employees(user.id)
         await self.task_status.delete_all_tasks(user.id)
-        await self.uow.commit()
 
     async def validate_wb_api_key(self, key: str) -> bool:
         return len(key) > 30

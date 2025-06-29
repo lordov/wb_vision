@@ -5,10 +5,8 @@ from aiogram_dialog.widgets.kbd import Button
 from fluentogram import TranslatorRunner
 
 from bot.database.uow import UnitOfWork
-from bot.services.api_key import ApiKeyService
-from bot.services.subscription import SubscriptionService
+from bot.core.dependency.container import DependencyContainer
 from bot.core.logging import app_logger
-from bot.core.security import fernet
 from bot.handlers.states import ApiPanel
 from broker import pre_load_info
 
@@ -20,11 +18,12 @@ async def api_key_input(
 ):
     uow: UnitOfWork = dialog_manager.middleware_data["uow"]
     i18n: TranslatorRunner = dialog_manager.middleware_data["i18n"]
+    container: DependencyContainer = dialog_manager.middleware_data["container"]
     user = message.from_user
     raw_key = message.text.strip()
     # Работа с API ключами
-    subscription_service = SubscriptionService(uow)
-    api_key_service = ApiKeyService(uow, fernet=fernet)
+    subscription_service = container.get_subscription_service(uow)
+    api_key_service = container.get_api_key_service(uow)
 
     try:
         if not await api_key_service.validate_wb_api_key(raw_key):
@@ -41,8 +40,6 @@ async def api_key_input(
             raw_key=raw_key,
             subscription_service=subscription_service,
         )
-
-        await uow.commit()
 
         if status == "active":
             await message.answer(i18n.get("api-key-success"))
@@ -74,8 +71,9 @@ async def delete_api_key(
 ):
     uow: UnitOfWork = dialog_manager.middleware_data["uow"]
     i18n: TranslatorRunner = dialog_manager.middleware_data["i18n"]
+    container: DependencyContainer = dialog_manager.middleware_data["container"]
     user = message.from_user
-    api_key_service = ApiKeyService(uow, fernet=fernet)
+    api_key_service = container.get_api_key_service(uow)
     try:
         await api_key_service.delete_key(user.id)
         await message.answer(i18n.get("api-key-deleted"))

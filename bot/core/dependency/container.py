@@ -1,4 +1,4 @@
-from typing import Type, TypeVar, Callable
+from typing import Callable
 from aiogram import Bot
 from cryptography.fernet import Fernet
 from fluentogram import TranslatorRunner
@@ -11,8 +11,6 @@ from bot.services.notifications import NotificationService
 from bot.services.users import UserService
 from bot.services.wb_service import WBService
 from bot.services.task_control import TaskControlService
-
-T = TypeVar("T")
 
 
 class DependencyContainer:
@@ -66,22 +64,7 @@ class DependencyContainer:
     def get_user_service(self, uow: UnitOfWork) -> UserService:
         """Создает UserService с переданным UoW."""
         return UserService(uow=uow)
-        
+
     def get_task_control_service(self, uow: UnitOfWork) -> TaskControlService:
         """Создает TaskControlService с переданным UoW."""
         return TaskControlService(uow=uow)
-
-    # Deprecated methods - оставляем для обратной совместимости
-    async def get(self, service_type: Type[T]) -> T:
-        """Deprecated: используйте get_*_service методы с явным UoW."""
-        if service_type in [NotificationService, ApiKeyService, SubscriptionService, 
-                           WBService, UserService, TaskControlService]:
-            raise ValueError(
-                f"Service {service_type.__name__} requires UoW. "
-                f"Use get_{service_type.__name__.lower().replace('service', '_service')} method instead."
-            )
-        raise ValueError(f"Unknown service: {service_type}")
-
-    async def _build(self, service_type: Type[T]) -> T:
-        """Deprecated: используйте get_*_service методы с явным UoW."""
-        raise ValueError("This method is deprecated. Use get_*_service methods instead.")

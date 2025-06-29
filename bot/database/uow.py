@@ -74,22 +74,6 @@ class UnitOfWork:
         finally:
             await self.close()
 
-
-@asynccontextmanager
-async def get_uow(session: AsyncSession) -> AsyncIterator[UnitOfWork]:
-    """Контекстный менеджер для создания UoW."""
-    uow = UnitOfWork(session)
-    try:
-        yield uow
-        await uow.commit()
-    except Exception as e:
-        await uow.rollback()
-        db_logger.error(f"Error in get_uow: {e}")
-        raise
-    finally:
-        await uow.close()
-
-
 if __name__ == '__main__':
     print(f'{__name__} Запущен самостоятельно')
 else:
