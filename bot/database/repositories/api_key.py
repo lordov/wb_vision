@@ -130,3 +130,27 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
             )
             for key in api_keys
         ]
+
+    async def deactivate_key_by_user_id(self, user_id: int) -> bool:
+        """Деактивировать API ключ пользователя при 401 ошибке."""
+        try:
+            stmt = select(ApiKey).where(
+                ApiKey.user_id == user_id,
+                ApiKey.is_active == True
+            )
+            result = await self.session.execute(stmt)
+            keys = result.scalars().all()
+            
+            if not keys:
+                db_logger.warning(f"No active API keys found for user {user_id}")
+                return False
+            
+            # Деактивируем все активные ключи пользователя
+            for key in keys:
+                key.is_active = False
+                db_logger.info(f"Deactivated API key {key.id} for user {user_id}")
+            
+            return True
+        except SQLAlchemyError as e:
+            db_logger.error(f"Failed to deactivate API key for user {user_id}: {e}")
+            raise e

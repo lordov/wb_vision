@@ -8,12 +8,11 @@ from aiogram_dialog import DialogManager, StartMode
 from fluentogram import TranslatorRunner
 
 from bot.core.dependency.container import DependencyContainer
-from bot.services.users import UserService
 from bot.database.uow import UnitOfWork
 from .kbd.keyboards import lk_main_button
 from .states import UserPanel, Support
 from bot.core.config import settings
-from broker import start_load_stocks, start_notif_pipline
+from broker import start_notif_pipline
 
 
 router = Router()

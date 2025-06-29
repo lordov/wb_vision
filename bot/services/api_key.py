@@ -136,3 +136,27 @@ class ApiKeyService:
         # Иначе сохраняем неактивный ключ
         await self.set_key(user.id, title, raw_key, is_active=False)
         return "inactive"
+
+    async def handle_unauthorized_key(self, user_id: int) -> bool:
+        """
+        Обрабатывает случай неактивного API ключа (401 ошибка).
+        Деактивирует ключ в базе данных.
+
+        Args:
+            user_id: ID пользователя
+
+        Returns:
+            bool: True если ключ был деактивирован, False если не найден
+        """
+        try:
+            # Деактивируем API ключ в базе данных
+            deactivated = await self.api_key.deactivate_key_by_user_id(user_id)
+
+            if deactivated:
+                app_logger.info(f"API key deactivated for user {user_id}")
+                return True
+
+        except Exception as e:
+            app_logger.error(
+                f"Failed to handle unauthorized key for user {user_id}: {e}")
+            raise

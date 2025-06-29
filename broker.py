@@ -11,11 +11,8 @@ from nats.js.api import ConsumerConfig
 from bot.core.config import settings
 from bot.core.dependency.container import DependencyContainer
 from bot.core.dependency.container_init import init_container
-from bot.services.api_key import ApiKeyService
-from bot.services.notifications import NotificationService
-from bot.services.users import UserService
-from bot.services.wb_service import WBService
-from bot.services.task_control import TaskControlService, TaskName
+from bot.services.task_control import TaskName
+from bot.api.base_api_client import UnauthorizedUser
 from bot.core.logging import app_logger
 
 
@@ -33,7 +30,7 @@ broker = PullBasedJetStreamBroker(
 
 broker.add_middlewares(
     PrometheusMiddleware(
-        server_addr="0.0.0.0", 
+        server_addr="0.0.0.0",
         server_port=9000,
         # Путь для хранения метрик в многопроцессной среде
         metrics_path=None  # Использует временную директорию по умолчанию
@@ -56,16 +53,17 @@ scheduler = TaskiqScheduler(
 async def startup(state: TaskiqState) -> None:
     container = init_container()
     state.container = container
-    
+
     # КРИТИЧЕСКИ ВАЖНО: восстанавливаем состояние после перезапуска контейнеров
     async with await container.create_uow() as uow:
         task_control = container.get_task_control_service(uow)
-        
+
         # Помечаем ВСЕ задачи в статусе 'running' как failed
         # так как после перезапуска контейнеров мы не можем знать их реальное состояние
         recovered_count = await task_control.recover_all_running_tasks()
-        
-        app_logger.info(f"Container restart: recovered {recovered_count} running tasks")
+
+        app_logger.info(
+            f"Container restart: recovered {recovered_count} running tasks")
 
 
 def container_dep(context: Annotated[Context, TaskiqDepends()]) -> DependencyContainer:
@@ -82,20 +80,38 @@ async def pre_load_info(
         api_service = container.get_api_key_service(uow)
         task_control = container.get_task_control_service(uow)
 
-        api_key = await api_service.get_user_key(telegram_id=telegram_id)
-        user_id = api_key.user_id
+        try:
+            api_key = await api_service.get_user_key(telegram_id=telegram_id)
+            user_id = api_key.user_id
 
-        # Проверяем и регистрируем задачу
-        if not await task_control.start_task(user_id, TaskName.PRE_LOAD_INFO):
-            app_logger.info(f'Pre-load orders task blocked for user {user_id}')
+            # Проверяем и регистрируем задачу
+            if not await task_control.start_task(user_id, TaskName.PRE_LOAD_INFO):
+                app_logger.info(
+                    f'Pre-load orders task blocked for user {user_id}')
+                return
+
+            app_logger.info(f'Pre-loaded info for {telegram_id}')
+            await wb_service.pre_load_orders(user_id, api_key.key_encrypted)
+            await wb_service.load_stocks(user_id, api_key.key_encrypted)
+
+            # Отмечаем задачу как завершенную
+            await task_control.complete_task(user_id, TaskName.PRE_LOAD_INFO, success=True)
+
+        except UnauthorizedUser as e:
+            # Если есть user_id, завершаем задачу
+            if 'user_id' in locals():
+                await task_control.complete_task(
+                    user_id, TaskName.PRE_LOAD_INFO, success=False,
+                    error_message=f"{e.message}")
             return
 
-        app_logger.info(f'Pre-loaded info for {telegram_id}')
-        await wb_service.pre_load_orders(user_id, api_key.key_encrypted)
-        await wb_service.load_stocks(user_id, api_key.key_encrypted)
-
-        # Отмечаем задачу как завершенную
-        await task_control.complete_task(user_id, TaskName.PRE_LOAD_INFO, success=True)
+        except Exception as e:
+            app_logger.error(
+                f'PRE_LOAD_INFO failed for telegram_id {telegram_id}: {e}')
+            if 'user_id' in locals():
+                await task_control.complete_task(
+                    user_id, TaskName.PRE_LOAD_INFO, success=False, error_message=str(e))
+            raise
 
 
 @broker.task(schedule=[{"cron": "*/30 * * * *"}])
@@ -138,6 +154,12 @@ async def load_stocks(
         try:
             await wb_service.load_stocks(user_id, api_key)
             await task_control.complete_task(user_id, TaskName.LOAD_STOCKS, success=True)
+
+        except UnauthorizedUser as e:
+            await task_control.complete_task(
+                user_id, TaskName.LOAD_STOCKS, success=False,
+                error_message=f"{e.message}")
+            return
         except Exception as e:
             app_logger.error(f'Load stocks failed for user {user_id}: {e}')
             await task_control.complete_task(
@@ -211,6 +233,12 @@ async def fetch_and_save_orders_for_key(
 
             if texts:
                 await notify_user_about_orders.kiq(telegram_id, texts, user_id)
+
+        except UnauthorizedUser as e:
+            await task_control.complete_task(
+                user_id, TaskName.START_NOTIF_PIPELINE, success=False,
+                error_message=f"{e.message}")
+            return
         except Exception as e:
             app_logger.error(
                 f'Fetch and save orders failed for user {user_id}: {e}')
@@ -247,7 +275,8 @@ async def notify_user_about_orders(
 
             # Завершаем пайплайн после успешной отправки всех сообщений
             await task_control.complete_task(user_id, TaskName.START_NOTIF_PIPELINE, success=True)
-            app_logger.info(f'Pipeline completed successfully for user {user_id}')
+            app_logger.info(
+                f'Pipeline completed successfully for user {user_id}')
 
         except Exception as e:
             app_logger.error(f'Notification failed for user {user_id}: {e}')

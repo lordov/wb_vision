@@ -9,8 +9,13 @@ from cachetools import TTLCache
 from collections import deque
 from .auth.strategy import AuthStrategy
 from ..core.logging import api_logger
-from ..core.security import decrypt_api_key
 
+
+class UnauthorizedUser(Exception):
+    """Исключение для случая, когда API ключ пользователя стал неактивным (401 ошибка)."""
+    def __init__(self, message: str = None):
+        self.message = message
+        super().__init__(self.message)
 
 class BaseAPIClient:
     """
@@ -96,7 +101,8 @@ class BaseAPIClient:
         if api_error.status == 401:
             self.api_logger.error(
                 f"Unauthorized (401): {method} {url} ({caller}), Details: {error_details}")
-            return None
+            # Выбрасываем исключение для обработки неактивного API ключа
+            raise UnauthorizedUser(f"{error_details}")
 
         elif api_error.status in {400, 404}:
             self.api_logger.error(

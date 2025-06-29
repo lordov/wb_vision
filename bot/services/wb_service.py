@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from fluentogram import TranslatorHub
 
 from bot.api.wb import WBAPIClient
+from bot.api.base_api_client import UnauthorizedUser
 from bot.schemas.wb import NotifOrder
 from bot.services.api_key import ApiKeyService
 from bot.database.uow import UnitOfWork
@@ -30,47 +31,77 @@ class WBService:
         self.i18n = i18n.get_translator_by_locale('ru')
 
     async def fetch_and_save_orders(self, user_id: int, api_key: str) -> list[str] | None:
-        api_client = WBAPIClient(token=api_key)
-        date_from = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-        orders = await api_client.get_orders(user_id, date_from)
+        try:
+            api_client = WBAPIClient(token=api_key)
+            date_from = (datetime.now() - timedelta(days=1)
+                         ).strftime("%Y-%m-%d")
+            orders = await api_client.get_orders(user_id, date_from)
 
-        if not orders:
-            return
+            if not orders:
+                return
 
-        new_orders = await self.uow.wb_orders.add_orders_bulk(orders=orders)
-        app_logger.info(
-            f"{len(new_orders)} new orders added for {user_id} ")
+            new_orders = await self.uow.wb_orders.add_orders_bulk(orders=orders)
+            app_logger.info(
+                f"{len(new_orders)} new orders added for {user_id} ")
 
-        if not new_orders:
-            app_logger.info(f"No new orders for {user_id}")
-            return
+            if not new_orders:
+                app_logger.info(f"No new orders for {user_id}")
+                return
 
-        await self._get_stats(self.uow, user_id, new_orders)
+            await self._get_stats(self.uow, user_id, new_orders)
 
-        # Сортируем заказы
-        new_orders = sorted(new_orders, key=lambda x: x.counter)
+            # Сортируем заказы
+            new_orders = sorted(new_orders, key=lambda x: x.counter)
 
-        # Генерируем тексты на основе обновлённых заказов
-        texts = await self._generate_texts(orders=new_orders)
+            # Генерируем тексты на основе обновлённых заказов
+            texts = await self._generate_texts(orders=new_orders)
 
-        return texts
+            return texts
+
+        except UnauthorizedUser as e:
+            app_logger.warning(
+                f"API key unauthorized for user {user_id}: {e.message}")
+
+            # Деактивируем API ключ
+            await self.api_key_service.handle_unauthorized_key(user_id)
+
+            # Получаем telegram_id пользователя для отправки уведомления
+            user = await self.uow.users.get_by_user_id(user_id)
+            if user:
+                # Отправляем уведомление пользователю
+                await self.notification_service.notify_api_key_deactivated(user.telegram_id)
+
+            # Повторно выбрасываем исключение для обработки на верхнем уровне
+            raise
 
     async def pre_load_orders(self, user_id: int, api_key: str) -> None:
+        try:
+            api_client = WBAPIClient(token=api_key)
+            date_from = datetime.now() - timedelta(days=90)
+            orders = await api_client.get_orders(user_id, date_from)
 
-        api_client = WBAPIClient(token=api_key)
-        date_from = datetime.now() - timedelta(days=90)
-        orders = await api_client.get_orders(user_id, date_from)
-        
-        await self.uow.wb_orders.add_orders_bulk(orders=orders)
-        app_logger.info(
-            f"Pre-loaded orders: {user_id} {len(orders)} ")
+            await self.uow.wb_orders.add_orders_bulk(orders=orders)
+            app_logger.info(
+                f"Pre-loaded orders: {user_id} {len(orders)} ")
+
+        except UnauthorizedUser as e:
+            app_logger.warning(
+                f"API key unauthorized during pre-load for user {user_id}: {e.message}")
+            await self.api_key_service.handle_unauthorized_key(user_id)
 
     async def load_stocks(self, user_id: int, api_key: str) -> None:
-        api_client = WBAPIClient(token=api_key)
-        stocks = await api_client.get_stocks(user_id)
-        
-        await self.uow.wb_stocks.add_stocks_bulk(stocks=stocks)
-        app_logger.info(f"Loaded stocks: {user_id} {len(stocks)} ")
+        try:
+            api_client = WBAPIClient(token=api_key)
+            stocks = await api_client.get_stocks(user_id)
+
+            await self.uow.wb_stocks.add_stocks_bulk(stocks=stocks)
+            app_logger.info(f"Loaded stocks: {user_id} {len(stocks)} ")
+
+        except UnauthorizedUser as e:
+            app_logger.warning(
+                f"API key unauthorized during stock loading for user {user_id}: {e.message}")
+            await self.api_key_service.handle_unauthorized_key(user_id)
+            raise
 
     async def _generate_texts(self, orders: list[NotifOrder]) -> list[dict]:
         result = []
