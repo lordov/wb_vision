@@ -1,5 +1,6 @@
 import asyncio
 import taskiq_aiogram
+from aiogram.exceptions import TelegramForbiddenError
 
 from typing import Annotated
 from taskiq import Context, TaskiqDepends, TaskiqEvents, TaskiqScheduler, TaskiqState
@@ -239,6 +240,7 @@ async def fetch_and_save_orders_for_key(
                 user_id, TaskName.START_NOTIF_PIPELINE, success=False,
                 error_message=f"{e.message}")
             return
+
         except Exception as e:
             app_logger.error(
                 f'Fetch and save orders failed for user {user_id}: {e}')
@@ -255,18 +257,16 @@ async def notify_user_about_orders(
     container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
 ):
     async with await container.create_uow() as uow:
-        service = container.get_notification_service(uow)
+        notify = container.get_notification_service(uow)
         task_control = container.get_task_control_service(uow)
         employee_service = container.get_user_service(uow)
         employees = await employee_service.get_active_employees(telegram_id)
-        all_telegram_ids = [telegram_id] + \
-            [employee.telegram_id for employee in employees]
+        all_telegram_ids = [employee.telegram_id for employee in employees]
+        for telegram_id in all_telegram_ids:
+            await notify_employee.kiq(telegram_id, texts)
 
         try:
-            await asyncio.gather(*[
-                service.send_message(telegram_id=tid, texts=texts)
-                for tid in all_telegram_ids
-            ])
+            await notify.send_message(telegram_id, texts)
             app_logger.info(
                 f'Notification sent to {len(all_telegram_ids)} employees')
 
@@ -278,11 +278,35 @@ async def notify_user_about_orders(
             app_logger.info(
                 f'Pipeline completed successfully for user {user_id}')
 
+        except TelegramForbiddenError as e:
+            await task_control.complete_task(
+                user_id, TaskName.START_NOTIF_PIPELINE, success=False, error_message=f"{e.message}")
+            return
+
         except Exception as e:
             app_logger.error(f'Notification failed for user {user_id}: {e}')
             await task_control.complete_task(
                 user_id, TaskName.START_NOTIF_PIPELINE, success=False, error_message=str(e))
             raise
+
+
+@broker.task()
+async def notify_employee(
+    telegram_id: int,
+    texts: list[dict],
+    container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
+):
+    async with await container.create_uow() as uow:
+        notify = container.get_notification_service(uow)
+        try:
+            await notify.send_message(telegram_id, texts)
+        except TelegramForbiddenError as e:
+            app_logger.warning(
+                f"Cannot send message to {telegram_id}: user blocked the bot")
+            return
+        except Exception as e:
+            app_logger.error(
+                f"Failed to send message to {telegram_id}: {e}")
 
 
 @broker.task(schedule=[{"cron": "0 2 * * *"}])  # Каждый день в 2:00

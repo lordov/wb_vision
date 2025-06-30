@@ -42,9 +42,9 @@ class NotificationService:
                         photo=text.get('photo'),
                         caption=text.get('text'), parse_mode="HTML"
                     )
-            except TelegramForbiddenError:
-                app_logger.warning(
-                    f"Cannot send message to {telegram_id}: user blocked the bot")
+            except TelegramForbiddenError as e:
+                await self.uow.users.block_user(telegram_id)
+                raise e
             except Exception as e:
                 print(e)
 
@@ -71,6 +71,7 @@ class NotificationService:
                 f"API key deactivation message sent to {telegram_id}")
 
         except TelegramForbiddenError:
+            await self.uow.users.block_user(telegram_id)
             app_logger.warning(
                 f"Cannot send message to {telegram_id}: user blocked the bot")
         except Exception as e:

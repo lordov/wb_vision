@@ -25,7 +25,6 @@ class User(Base):
     locale: Mapped[str] = mapped_column(String(10), default="ru")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
-    is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
 
     api_keys: Mapped[list["ApiKey"]] = relationship(back_populates="user")
     subscriptions: Mapped[list["Subscription"]
@@ -223,7 +222,6 @@ class SalesWB(Base):
     g_number: Mapped[str] = mapped_column(String(255), nullable=False)
     srid: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
     warehouse_type: Mapped[str] = mapped_column(String(255), nullable=True)
-
 
     __table_args__ = (UniqueConstraint(
         'date', 'user_id', 'srid', 'nm_id', 'tech_size',
