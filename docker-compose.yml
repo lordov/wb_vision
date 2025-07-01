@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   bot:
-    build: .
+    image: lordovat/wb_monitor:latest
     container_name: bot
     command: [ "python", "main.py" ]
     env_file: .env
@@ -13,7 +13,7 @@ services:
     restart: always
 
   worker:
-    build: .
+    image: lordovat/wb_monitor:latest
     container_name: worker
     command: [ "taskiq", "worker", "broker:broker" ]
     env_file: .env
@@ -25,7 +25,7 @@ services:
     restart: always
 
   scheduler:
-    build: .
+    image: lordovat/wb_monitor:latest
     container_name: scheduler
     command: [ "taskiq", "scheduler", "broker:scheduler" ]
     env_file: .env
@@ -37,7 +37,7 @@ services:
     restart: always
 
   migrate:
-    build: .
+    image: lordovat/wb_monitor:latest
     container_name: migrate
     command: [ "alembic", "upgrade", "head" ]
     env_file: .env

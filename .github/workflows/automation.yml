@@ -1,0 +1,33 @@
+name: "Docker Build and Push"
+
+# Указываем, что воркфлоу должен срабатывать при каждом пуше в ветку master
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  # Определяем задачу "build_and_push"
+  build_and_push:
+    # Запускаем эту задачу на виртуальной машине с Ubuntu
+    runs-on: ubuntu-latest
+
+    steps:
+      # Шаг: Клонирование репозитория
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      # Шаг: Логин в Docker Hub с использованием секретов
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}  # Имя пользователя Docker Hub из секретов
+          password: ${{ secrets.DOCKERHUB_API_KEY }}      # Токен доступа Docker Hub из секретов
+
+      # Шаг: Сборка Docker образа из Dockerfile
+      - name: Build Docker Image
+        run: docker build -t lordovat/wb_monitor:latest .  # Сборка образа с тегом lordovat/testrep:mybot_latest
+
+      # Шаг: Пуш Docker образа на Docker Hub
+      - name: Push Docker Image
+        run: docker push lordovat/wb_monitor:latest  # Пуш образа на Docker Hub
