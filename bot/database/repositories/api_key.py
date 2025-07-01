@@ -5,7 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from bot.schemas.wb import ApiKeyWithTelegramDTO
 
-from ..models import ApiKey
+from ..models import ApiKey, User
 from .base import SQLAlchemyRepository
 from ...core.logging import db_logger
 
@@ -110,7 +110,15 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
             raise e
 
     async def get_all_active_keys(self) -> list[ApiKeyWithTelegramDTO]:
-        stmt = select(ApiKey).options(joinedload(ApiKey.user)).where(ApiKey.is_active)
+        stmt = (
+            select(ApiKey)
+            .join(User)
+            .options(joinedload(ApiKey.user))
+            .where(
+                ApiKey.is_active == True,
+                User.is_active == True
+            )
+        )
         try:
             result = await self.session.execute(stmt)
             api_keys: list[ApiKey] = result.scalars().all()
@@ -123,10 +131,36 @@ class WbApiKeyRepository(SQLAlchemyRepository[ApiKey]):
                 id=key.id,
                 user_id=key.user_id,
                 title=key.title,
-                # Предполагается, что ты уже умеешь расшифровывать
                 key_encrypted=key.key_encrypted,
                 is_active=key.is_active,
-                telegram_id=key.user.telegram_id if key.user else None,
+                telegram_id=key.user.telegram_id,
             )
             for key in api_keys
         ]
+
+    async def deactivate_key_by_user_id(self, user_id: int) -> bool:
+        """Деактивировать API ключ пользователя при 401 ошибке."""
+        try:
+            stmt = select(ApiKey).where(
+                ApiKey.user_id == user_id,
+                ApiKey.is_active == True
+            )
+            result = await self.session.execute(stmt)
+            keys = result.scalars().all()
+
+            if not keys:
+                db_logger.warning(
+                    f"No active API keys found for user {user_id}")
+                return False
+
+            # Деактивируем все активные ключи пользователя
+            for key in keys:
+                key.is_active = False
+                db_logger.info(
+                    f"Deactivated API key {key.id} for user {user_id}")
+
+            return True
+        except SQLAlchemyError as e:
+            db_logger.error(
+                f"Failed to deactivate API key for user {user_id}: {e}")
+            raise e

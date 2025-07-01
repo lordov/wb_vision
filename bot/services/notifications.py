@@ -42,8 +42,39 @@ class NotificationService:
                         photo=text.get('photo'),
                         caption=text.get('text'), parse_mode="HTML"
                     )
-            except TelegramForbiddenError:
-                ...
+            except TelegramForbiddenError as e:
+                await self.uow.users.block_user(telegram_id)
+                raise e
             except Exception as e:
                 print(e)
 
+    async def notify_api_key_deactivated(self, telegram_id: int) -> None:
+        """
+        Отправляет уведомление пользователю о деактивации API ключа.
+
+        Args:
+            telegram_id: Telegram ID пользователя
+        """
+        try:
+            app_logger.info(
+                f"Sending API key deactivation message to {telegram_id}")
+
+            limiter = get_user_limiter(telegram_id)
+            async with limiter:
+                await self.bot.send_message(
+                    chat_id=telegram_id,
+                    text=self.i18n.get('api-key-deactivated'),
+                    parse_mode="HTML"
+                )
+
+            app_logger.info(
+                f"API key deactivation message sent to {telegram_id}")
+
+        except TelegramForbiddenError:
+            await self.uow.users.block_user(telegram_id)
+            app_logger.warning(
+                f"Cannot send message to {telegram_id}: user blocked the bot")
+        except Exception as e:
+            app_logger.error(
+                f"Failed to send API key deactivation message to {telegram_id}: {e}")
+            raise

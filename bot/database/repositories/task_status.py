@@ -1,6 +1,6 @@
 from typing import Type, Optional
 from datetime import datetime, timedelta
-from sqlalchemy import select, or_
+from sqlalchemy import delete, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -227,3 +227,11 @@ class TaskStatusRepository(SQLAlchemyRepository[TaskStatus]):
         )
         result = await self.session.execute(stmt)
         return result.scalars().all()
+
+    async def delete_all_tasks(self, user_id: int) -> None:
+        """Удалить все задачи пользователя."""
+        stmt = delete(TaskStatus).where(
+            TaskStatus.user_id == user_id
+        )
+        await self.session.execute(stmt)
+        db_logger.info(f"Deleted all tasks for user {user_id}")

@@ -18,6 +18,7 @@ class ApiKeyService:
         self.api_key = uow.api_keys
         self.users = uow.users
         self.employee = uow.employee
+        self.task_status = uow.task_status
         self.fernet = fernet
 
     async def get_user_key(self, telegram_id: int) -> ApiKeyWithTelegramDTO:
@@ -46,7 +47,7 @@ class ApiKeyService:
         app_logger.info("Getting all decrypted API keys")
         try:
             # Получаем все ключи из репозитория
-            keys = await self.api_key.get_all_keys()
+            keys = await self.api_key.get_all_active_keys()
         except Exception as e:
             app_logger.warning(f"Failed to fetch API keys: {e}")
             return []
@@ -80,13 +81,14 @@ class ApiKeyService:
         encrypted = self.fernet.encrypt(raw_key.encode()).decode()
         await self.api_key.upsert_key(user_id, title, encrypted, is_active=is_active)
 
-    async def disable_key(self, telegram_id: int):
+    async def delete_key(self, telegram_id: int):
         user = await self.users.get_by_tg_id(telegram_id)
         if not user:
             raise ValueError("User not found")
         await self.api_key.delete_user_keys(user.id)
+        # Подумать над правильным удалением сотрудников
         await self.employee.delete_all_employees(user.id)
-        await self.uow.commit()
+        await self.task_status.delete_all_tasks(user.id)
 
     async def validate_wb_api_key(self, key: str) -> bool:
         return len(key) > 30
@@ -134,3 +136,27 @@ class ApiKeyService:
         # Иначе сохраняем неактивный ключ
         await self.set_key(user.id, title, raw_key, is_active=False)
         return "inactive"
+
+    async def handle_unauthorized_key(self, user_id: int) -> bool:
+        """
+        Обрабатывает случай неактивного API ключа (401 ошибка).
+        Деактивирует ключ в базе данных.
+
+        Args:
+            user_id: ID пользователя
+
+        Returns:
+            bool: True если ключ был деактивирован, False если не найден
+        """
+        try:
+            # Деактивируем API ключ в базе данных
+            deactivated = await self.api_key.deactivate_key_by_user_id(user_id)
+
+            if deactivated:
+                app_logger.info(f"API key deactivated for user {user_id}")
+                return True
+
+        except Exception as e:
+            app_logger.error(
+                f"Failed to handle unauthorized key for user {user_id}: {e}")
+            raise

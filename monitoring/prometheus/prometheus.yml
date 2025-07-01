@@ -1,0 +1,38 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+scrape_configs:
+  # Мониторинг самого Prometheus
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Мониторинг TaskIQ брокера через PrometheusMiddleware
+  - job_name: 'taskiq-broker'
+    static_configs:
+      - targets: ['worker:9000']  # Порт из PrometheusMiddleware в broker.py
+    scrape_interval: 10s
+    metrics_path: /metrics
+
+  # Мониторинг NATS
+  - job_name: 'nats'
+    static_configs:
+      - targets: ['nats:8222']
+    metrics_path: /varz
+    scrape_interval: 15s
+
+  # Мониторинг PostgreSQL (если есть postgres_exporter)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+
+  # Мониторинг Redis (если есть redis_exporter)  
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s 
