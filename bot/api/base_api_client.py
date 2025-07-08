@@ -12,7 +12,7 @@ from ..core.logging import api_logger
 
 
 class UnauthorizedUser(Exception):
-    """Исключение для случая, когда API ключ пользователя стал неактивным (401 ошибка)."""
+    """Исключение, когда API ключ пользователя стал неактивным (401 ошибка)."""
     def __init__(self, message: str = None):
         self.message = message
         super().__init__(self.message)

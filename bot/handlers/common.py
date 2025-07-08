@@ -12,7 +12,7 @@ from bot.database.uow import UnitOfWork
 from .kbd.keyboards import lk_main_button
 from .states import UserPanel, Support
 from bot.core.config import settings
-from broker import start_notif_pipline
+from broker import start_orders_notif
 
 
 router = Router()
@@ -106,7 +106,7 @@ async def task(
     message: Message,
     container: DependencyContainer,
 ):
-    await start_notif_pipline(container=container)
+    await start_orders_notif.kiq()
 
 
 @router.message(Command('support'))

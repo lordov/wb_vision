@@ -8,7 +8,7 @@ from bot.database.uow import UnitOfWork
 from bot.core.dependency.container import DependencyContainer
 from bot.core.logging import app_logger
 from bot.handlers.states import ApiPanel
-from broker import pre_load_info
+from broker import load_info
 
 
 async def api_key_input(
@@ -56,7 +56,7 @@ async def api_key_input(
             await dialog_manager.switch_to(ApiPanel.start)
 
         await message.answer(i18n.get("api-key-pre-load"))
-        await pre_load_info.kiq(telegram_id=user.id)
+        await load_info.kiq(telegram_id=user.id)
 
     except Exception as e:
         app_logger.exception("API Key save failed",

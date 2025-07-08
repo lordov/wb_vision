@@ -24,15 +24,3 @@ scrape_configs:
       - targets: ['nats:8222']
     metrics_path: /varz
     scrape_interval: 15s
-
-  # Мониторинг PostgreSQL (если есть postgres_exporter)
-  - job_name: 'postgres'
-    static_configs:
-      - targets: ['postgres-exporter:9187']
-    scrape_interval: 30s
-
-  # Мониторинг Redis (если есть redis_exporter)  
-  - job_name: 'redis'
-    static_configs:
-      - targets: ['redis-exporter:9121']
-    scrape_interval: 30s 
