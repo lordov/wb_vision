@@ -2,6 +2,7 @@ version: "3.9"
 
 services:
   bot:
+    build: .
     image: lordovat/wb_monitor:latest
     container_name: bot
     command: [ "python", "main.py" ]
@@ -13,6 +14,7 @@ services:
     restart: always
 
   worker:
+    build: .
     image: lordovat/wb_monitor:latest
     container_name: worker
     command: [ "taskiq", "worker", "broker:broker" ]
@@ -25,6 +27,7 @@ services:
     restart: always
 
   scheduler:
+    build: .
     image: lordovat/wb_monitor:latest
     container_name: scheduler
     command: [ "taskiq", "scheduler", "broker:scheduler" ]
@@ -37,6 +40,7 @@ services:
     restart: always
 
   migrate:
+    build: .
     image: lordovat/wb_monitor:latest
     container_name: migrate
     command: [ "alembic", "upgrade", "head" ]
@@ -49,6 +53,7 @@ services:
     restart: "no" # однократный запуск
 
   db:
+    build: .
     image: postgres:latest
     container_name: postgres
     environment:
@@ -62,6 +67,7 @@ services:
     restart: always
 
   redis:
+    build: .
     image: redis:latest
     container_name: redis
     ports:
@@ -69,6 +75,7 @@ services:
     restart: always
 
   nats:
+    build: .
     image: nats:2.9.0
     
     container_name: nats
@@ -83,6 +90,7 @@ services:
       -c /config/server.conf -js
     restart: always
   nats-nui:
+    build: .
     image: ghcr.io/nats-nui/nui:latest
     container_name: nats-nui
     ports:
@@ -94,6 +102,7 @@ services:
 
   # Prometheus для сбора метрик
   prometheus:
+    build: .
     image: prom/prometheus:latest
     container_name: prometheus
     ports:
@@ -113,6 +122,7 @@ services:
 
   # Grafana для визуализации метрик
   grafana:
+    build: .
     image: grafana/grafana:latest
     container_name: grafana
     ports:
