@@ -76,8 +76,10 @@ async def load_info(
     telegram_id: int,
     container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
 ):
+    user_id = None
+    
+    # Первая транзакция: получаем данные и регистрируем начало задачи
     async with await container.create_uow() as uow:
-        wb_service = container.get_wb_service(uow)
         api_service = container.get_api_key_service(uow)
         task_control = container.get_task_control_service(uow)
 
@@ -86,32 +88,48 @@ async def load_info(
             user_id = api_key.user_id
 
             # Проверяем и регистрируем задачу
-            if await task_control.start_task(user_id, TaskName.PRE_LOAD_INFO):
-                app_logger.info(f'Pre-loaded info for {telegram_id}')
-                await wb_service.pre_load_orders(user_id, api_key.key_encrypted)
-                await wb_service.load_stocks(user_id, api_key.key_encrypted)
-
-                # Отмечаем задачу как завершенную
-                await task_control.complete_task(user_id, TaskName.PRE_LOAD_INFO, success=True)
-            else:
-                app_logger.info(
-                    f'Pre-load orders task blocked for user {user_id}')
-
-        except UnauthorizedUser as e:
-            # Если есть user_id, завершаем задачу
-            if 'user_id' in locals():
-                await task_control.complete_task(
-                    user_id, TaskName.PRE_LOAD_INFO, success=False,
-                    error_message=f"{e.message}")
+            if not await task_control.start_task(user_id, TaskName.PRE_LOAD_INFO):
+                app_logger.info(f'Pre-load orders task blocked for user {user_id}')
+                return
+            
+            # Транзакция автоматически коммитится при выходе из контекста
+            app_logger.info(f'Task PRE_LOAD_INFO started for user {user_id}')
+            
+        except Exception as e:
+            app_logger.error(f'Failed to start PRE_LOAD_INFO task for telegram_id {telegram_id}: {e}')
             return
 
-        except Exception as e:
-            app_logger.error(
-                f'PRE_LOAD_INFO failed for telegram_id {telegram_id}: {e}')
-            if 'user_id' in locals():
-                await task_control.complete_task(
-                    user_id, TaskName.PRE_LOAD_INFO, success=False, error_message=str(e))
-            raise
+    # Вторая транзакция: выполняем основную работу
+    try:
+        async with await container.create_uow() as uow:
+            wb_service = container.get_wb_service(uow)
+            
+            app_logger.info(f'Pre-loaded info for {telegram_id}')
+            await wb_service.pre_load_orders(user_id, api_key.key_encrypted)
+            await wb_service.load_stocks(user_id, api_key.key_encrypted)
+
+    except UnauthorizedUser as e:
+        # Третья транзакция: завершаем задачу с ошибкой
+        async with await container.create_uow() as uow:
+            task_control = container.get_task_control_service(uow)
+            await task_control.complete_task(
+                user_id, TaskName.PRE_LOAD_INFO, success=False,
+                error_message=f"{e.message}")
+        return
+
+    except Exception as e:
+        app_logger.error(f'PRE_LOAD_INFO failed for telegram_id {telegram_id}: {e}')
+        # Третья транзакция: завершаем задачу с ошибкой
+        async with await container.create_uow() as uow:
+            task_control = container.get_task_control_service(uow)
+            await task_control.complete_task(
+                user_id, TaskName.PRE_LOAD_INFO, success=False, error_message=str(e))
+        raise
+
+    # Третья транзакция: завершаем задачу успешно
+    async with await container.create_uow() as uow:
+        task_control = container.get_task_control_service(uow)
+        await task_control.complete_task(user_id, TaskName.PRE_LOAD_INFO, success=True)
 
 
 @broker.task(schedule=[{"cron": "*/30 * * * *"}])
