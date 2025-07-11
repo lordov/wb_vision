@@ -86,17 +86,16 @@ async def load_info(
             user_id = api_key.user_id
 
             # Проверяем и регистрируем задачу
-            if not await task_control.start_task(user_id, TaskName.PRE_LOAD_INFO):
+            if await task_control.start_task(user_id, TaskName.PRE_LOAD_INFO):
+                app_logger.info(f'Pre-loaded info for {telegram_id}')
+                await wb_service.pre_load_orders(user_id, api_key.key_encrypted)
+                await wb_service.load_stocks(user_id, api_key.key_encrypted)
+
+                # Отмечаем задачу как завершенную
+                await task_control.complete_task(user_id, TaskName.PRE_LOAD_INFO, success=True)
+            else:
                 app_logger.info(
                     f'Pre-load orders task blocked for user {user_id}')
-                return
-
-            app_logger.info(f'Pre-loaded info for {telegram_id}')
-            await wb_service.pre_load_orders(user_id, api_key.key_encrypted)
-            await wb_service.load_stocks(user_id, api_key.key_encrypted)
-
-            # Отмечаем задачу как завершенную
-            await task_control.complete_task(user_id, TaskName.PRE_LOAD_INFO, success=True)
 
         except UnauthorizedUser as e:
             # Если есть user_id, завершаем задачу
@@ -231,15 +230,15 @@ async def fetch_and_save_orders_for_key(
                     error_message=f"{e.message}")
                 return
 
-            if not texts:
-                app_logger.info(
-                    f'No new orders for user {user_id}, completing pipeline')
-                # Завершаем пайплайн, так как нет новых заказов
-                await task_control.complete_task(user_id, TaskName.START_NOTIF_PIPELINE, success=True)
-                return
+        if not texts:
+            app_logger.info(
+                f'No new orders for user {user_id}, completing pipeline')
+            # Завершаем пайплайн, так как нет новых заказов
+            await task_control.complete_task(user_id, TaskName.START_NOTIF_PIPELINE, success=True)
+            return
 
-            if texts:
-                await notify_user_about_orders.kiq(telegram_id, texts, user_id)
+        if texts:
+            await notify_user_about_orders.kiq(telegram_id, texts, user_id)
 
     except Exception as e:
         app_logger.error(
@@ -263,32 +262,26 @@ async def notify_user_about_orders(
         employees = await employee_service.get_active_employees(telegram_id)
         all_telegram_ids = [employee.telegram_id for employee in employees]
 
-    for telegram_id in all_telegram_ids:
-        await notify_employee.kiq(telegram_id, texts)
+        for telegram_id in all_telegram_ids:
+            await notify_employee.kiq(telegram_id, texts)
 
-    try:
-        await notify.send_message(telegram_id, texts)
-        app_logger.info(
-            f'Notification sent to {len(all_telegram_ids)} employees')
+        try:
+            await notify.send_message(telegram_id, texts)
+            # Завершаем пайплайн после успешной отправки всех сообщений
+            await task_control.complete_task(user_id, TaskName.START_NOTIF_PIPELINE, success=True)
+            app_logger.info(
+                f'Pipeline completed successfully for user {user_id}')
 
-        app_logger.info(
-            f'Notifications sent for telegram_id {telegram_id}, user_id {user_id}')
+        except TelegramForbiddenError as e:
+            await task_control.complete_task(
+                user_id, TaskName.START_NOTIF_PIPELINE, success=False, error_message=f"{e.message}")
+            return
 
-        # Завершаем пайплайн после успешной отправки всех сообщений
-        await task_control.complete_task(user_id, TaskName.START_NOTIF_PIPELINE, success=True)
-        app_logger.info(
-            f'Pipeline completed successfully for user {user_id}')
-
-    except TelegramForbiddenError as e:
-        await task_control.complete_task(
-            user_id, TaskName.START_NOTIF_PIPELINE, success=False, error_message=f"{e.message}")
-        return
-
-    except Exception as e:
-        app_logger.error(f'Notification failed for user {user_id}: {e}')
-        await task_control.complete_task(
-            user_id, TaskName.START_NOTIF_PIPELINE, success=False, error_message=str(e))
-        raise
+        except Exception as e:
+            app_logger.error(f'Notification failed for user {user_id}: {e}')
+            await task_control.complete_task(
+                user_id, TaskName.START_NOTIF_PIPELINE, success=False, error_message=str(e))
+            raise
 
 
 @broker.task()
