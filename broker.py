@@ -76,8 +76,6 @@ async def load_info(
     telegram_id: int,
     container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
 ):
-    user_id = None
-    
     # Первая транзакция: получаем данные и регистрируем начало задачи
     async with await container.create_uow() as uow:
         api_service = container.get_api_key_service(uow)

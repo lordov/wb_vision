@@ -12,7 +12,7 @@ from bot.database.uow import UnitOfWork
 from .kbd.keyboards import lk_main_button
 from .states import UserPanel, Support
 from bot.core.config import settings
-from broker import start_orders_notif
+from broker import load_info
 
 
 router = Router()
@@ -106,7 +106,7 @@ async def task(
     message: Message,
     container: DependencyContainer,
 ):
-    await start_orders_notif.kiq()
+    await load_info.kiq(telegram_id=message.from_user.id)
 
 
 @router.message(Command('support'))

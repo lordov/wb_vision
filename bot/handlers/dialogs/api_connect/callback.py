@@ -22,24 +22,25 @@ async def api_key_input(
     user = message.from_user
     raw_key = message.text.strip()
     # Работа с API ключами
-    subscription_service = container.get_subscription_service(uow)
-    api_key_service = container.get_api_key_service(uow)
 
     try:
-        if not await api_key_service.validate_wb_api_key(raw_key):
-            await message.answer(i18n.get("api-key-invalid"))
-            return
+        async with await container.create_uow() as uow:
+            subscription_service = container.get_subscription_service(uow)
+            api_key_service = container.get_api_key_service(uow)
+            if not await api_key_service.validate_wb_api_key(raw_key):
+                await message.answer(i18n.get("api-key-invalid"))
+                return
 
-        if not await api_key_service.check_request_to_wb(raw_key):
-            await message.answer(i18n.get("api-key-invalid-request"))
-            return
+            if not await api_key_service.check_request_to_wb(raw_key):
+                await message.answer(i18n.get("api-key-invalid-request"))
+                return
 
-        status = await api_key_service.set_api_key_with_subscription_check(
-            telegram_id=user.id,
-            title="wb_stats",
-            raw_key=raw_key,
-            subscription_service=subscription_service,
-        )
+            status = await api_key_service.set_api_key_with_subscription_check(
+                telegram_id=user.id,
+                title="wb_stats",
+                raw_key=raw_key,
+                subscription_service=subscription_service,
+            )
 
         if status == "active":
             await message.answer(i18n.get("api-key-success"))
@@ -57,7 +58,6 @@ async def api_key_input(
 
         await message.answer(i18n.get("api-key-pre-load"))
         await load_info.kiq(telegram_id=user.id)
-
     except Exception as e:
         app_logger.exception("API Key save failed",
                              error=str(e), user_id=user.id)
