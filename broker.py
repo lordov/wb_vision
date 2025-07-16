@@ -150,7 +150,7 @@ async def cron_load_stocks(
 
         for key in available_keys:
             if await task_control.start_task(key.user_id, TaskName.LOAD_STOCKS):
-                await load_stocks(key.user_id, key.key_encrypted)
+                await load_stocks.kiq(key.user_id, key.key_encrypted)
             else:
                 app_logger.info(f'LOAD_STOCKS blocked for user {key.user_id}')
 
@@ -250,8 +250,10 @@ async def fetch_and_save_orders_for_key(
             app_logger.info(
                 f'No new orders for user {user_id}, completing pipeline')
             # Завершаем пайплайн, так как нет новых заказов
-            await task_control.complete_task(user_id, TaskName.START_NOTIF_PIPELINE, success=True)
-            return
+            async with await container.create_uow() as uow:
+                task_control = container.get_task_control_service(uow)
+                await task_control.complete_task(user_id, TaskName.START_NOTIF_PIPELINE, success=True)
+                return
 
         if texts:
             await notify_user_about_orders.kiq(telegram_id, texts, user_id)

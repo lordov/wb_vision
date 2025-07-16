@@ -1,6 +1,6 @@
 name: "Docker Build and Push"
 
-# Указываем, что воркфлоу должен срабатывать при каждом пуше в ветку master
+# Указываем, что воркфлоу должен срабатывать при каждом пуше в ветку main
 on:
   push:
     branches:
@@ -26,8 +26,8 @@ jobs:
 
       # Шаг: Сборка Docker образа из Dockerfile
       - name: Build Docker Image
-        run: docker build -t lordovat/wb_vision:latest .  # Сборка образа с тегом lordovat/testrep:mybot_latest
+        run: docker build -t lordovat/wb_vision:latest .  # Сборка образа (Укажите свой образ)
 
       # Шаг: Пуш Docker образа на Docker Hub
       - name: Push Docker Image
-        run: docker push lordovat/wb_vision:latest  # Пуш образа на Docker Hub
+        run: docker push lordovat/wb_vision:latest  # Пуш образа на Docker Hub (Укажите свой образ)
