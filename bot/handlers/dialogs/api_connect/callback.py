@@ -62,6 +62,8 @@ async def api_key_input(
         app_logger.exception("API Key save failed",
                              error=str(e), user_id=user.id)
         await message.answer('Непредвиденная ошибка')
+    finally:
+        await message.delete()
 
 
 async def delete_api_key(
