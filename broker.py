@@ -334,6 +334,17 @@ async def cleanup_old_tasks(
         app_logger.info(f'Cleaned up {cleaned_count} old task records')
 
 
+@broker.task(schedule=[{"cron": "*/30 * * * *"}])  # Каждые 30 минут
+async def cleanup_hanging_tasks(
+    container: Annotated[DependencyContainer, TaskiqDepends(container_dep)]
+) -> None:
+    """Очистка зависших задач в статусе running."""
+    async with await container.create_uow() as uow:
+        task_control = container.get_task_control_service(uow)
+        hanging_count = await task_control.cleanup_hanging_tasks(hours_old=2)
+        app_logger.info(f'Cleaned up {hanging_count} hanging task records')
+
+
 async def main() -> None:
     try:
         await broker.startup()

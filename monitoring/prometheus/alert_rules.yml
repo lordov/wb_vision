@@ -43,22 +43,63 @@ groups:
 
       # Алерт при недоступности брокера
       - alert: BrokerDown
-        expr: up{job="taskiq-broker"} == 0
+        expr: up{job="taskiq_broker"} == 0
         for: 1m
         labels:
           severity: critical
         annotations:
           summary: "TaskIQ брокер недоступен"
-          description: "Брокер не отвечает на запросы более 1 минуты"
+          description: "TaskIQ брокер не отвечает более 1 минуты"
 
-  - name: nats_alerts
+  # Группа алертов для ошибок приложения
+  - name: application_errors
     rules:
-      # Алерт при недоступности NATS
-      - alert: NATSDown
-        expr: up{job="nats"} == 0
+      # Алерт при высокой частоте ошибок cleanup
+      - alert: HighCleanupErrorRate
+        expr: rate(application_errors_total{component="task_cleanup"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокая частота ошибок при очистке задач"
+          description: "Более 0.1 ошибок в секунду при очистке задач в течение 2 минут"
+
+      # Алерт при критических ошибках cleanup
+      - alert: CriticalCleanupErrors
+        expr: rate(application_errors_total{component="task_cleanup",severity="error"}[5m]) > 0
         for: 1m
         labels:
           severity: critical
         annotations:
-          summary: "NATS сервер недоступен"
-          description: "NATS сервер не отвечает на запросы более 1 минуты" 
+          summary: "Критические ошибки при очистке задач"
+          description: "Обнаружены критические ошибки при очистке задач"
+
+      # Алерт при обнаружении зависших задач
+      - alert: HangingTasksDetected
+        expr: increase(application_errors_total{error_type="hanging_tasks_found"}[30m]) > 0
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Обнаружены зависшие задачи"
+          description: "Система обнаружила задачи, которые работают дольше 2 часов"
+
+      # Алерт при частых таймаутах задач
+      - alert: FrequentTaskTimeouts
+        expr: rate(application_errors_total{error_type="task_timeout"}[10m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Частые таймауты задач"
+          description: "Более 0.5 таймаутов задач в секунду в течение 5 минут"
+
+      # Алерт при ошибках базы данных
+      - alert: DatabaseErrors
+        expr: rate(application_errors_total{error_type="database_error"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Ошибки базы данных"
+          description: "Обнаружены ошибки при работе с базой данных" 

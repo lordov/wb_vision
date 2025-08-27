@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from bot.database.models import TaskStatus
 from .base import SQLAlchemyRepository, T
-from bot.core.logging import db_logger
+from bot.core.logging import db_logger, log_error_with_metrics, task_cleanup_metrics
 
 
 class TaskStatusRepository(SQLAlchemyRepository[TaskStatus]):
@@ -213,11 +213,93 @@ class TaskStatusRepository(SQLAlchemyRepository[TaskStatus]):
                 await self.session.delete(task)
 
             count = len(old_tasks)
+            
+            # Обновляем метрики
+            task_cleanup_metrics.labels(cleanup_type="old_tasks", status="success").inc(count)
+            
             db_logger.info(f"Cleaned up {count} old tasks")
             return count
 
         except SQLAlchemyError as e:
             db_logger.error(f"Error cleaning up old tasks: {e}", error=str(e))
+            # Логируем ошибку с метриками
+            log_error_with_metrics(
+                error_type="database_error",
+                component="task_cleanup",
+                severity="error",
+                message=f"Error cleaning up old tasks: {e}",
+                operation="cleanup_old_tasks",
+                days_old=days_old,
+                error=str(e)
+            )
+            task_cleanup_metrics.labels(cleanup_type="old_tasks", status="error").inc()
+            return 0
+
+    async def cleanup_hanging_tasks(self, hours_old: int = 2) -> int:
+        """Очистить задачи в статусе running, которые работают дольше указанного времени."""
+        cutoff_date = datetime.now() - timedelta(hours=hours_old)
+
+        stmt = select(TaskStatus).where(
+            TaskStatus.status == "running",
+            TaskStatus.created < cutoff_date
+        )
+
+        try:
+            result = await self.session.execute(stmt)
+            hanging_tasks = result.scalars().all()
+
+            for task in hanging_tasks:
+                # Обновляем статус на failed вместо удаления для сохранения истории
+                task.status = "failed"
+                task.completed_at = datetime.now()
+                task.error_message = f"Task timeout after {hours_old} hours"
+                
+                # Логируем каждую зависшую задачу как ошибку
+                log_error_with_metrics(
+                    error_type="task_timeout",
+                    component="task_cleanup",
+                    severity="warning",
+                    message=f"Task {task.task_name} timed out after {hours_old} hours",
+                    user_id=task.user_id,
+                    task_name=task.task_name,
+                    task_id=task.task_id,
+                    hours_old=hours_old,
+                    created_at=task.created.isoformat()
+                )
+
+            count = len(hanging_tasks)
+            
+            # Обновляем метрики
+            if count > 0:
+                task_cleanup_metrics.labels(cleanup_type="hanging_tasks", status="success").inc(count)
+                # Также считаем это как предупреждение в общих метриках
+                log_error_with_metrics(
+                    error_type="hanging_tasks_found",
+                    component="task_cleanup",
+                    severity="warning",
+                    message=f"Found and cleaned {count} hanging tasks (running > {hours_old} hours)",
+                    count=count,
+                    hours_old=hours_old
+                )
+            else:
+                task_cleanup_metrics.labels(cleanup_type="hanging_tasks", status="success").inc(0)
+                
+            db_logger.info(f"Marked {count} hanging tasks as failed (running > {hours_old} hours)")
+            return count
+
+        except SQLAlchemyError as e:
+            db_logger.error(f"Error cleaning up hanging tasks: {e}", error=str(e))
+            # Логируем ошибку с метриками
+            log_error_with_metrics(
+                error_type="database_error",
+                component="task_cleanup",
+                severity="error",
+                message=f"Error cleaning up hanging tasks: {e}",
+                operation="cleanup_hanging_tasks",
+                hours_old=hours_old,
+                error=str(e)
+            )
+            task_cleanup_metrics.labels(cleanup_type="hanging_tasks", status="error").inc()
             return 0
 
     async def get_all_running_tasks(self) -> list[TaskStatus]:

@@ -3,7 +3,7 @@ from enum import Enum
 from datetime import datetime
 
 from bot.database.uow import UnitOfWork
-from bot.core.logging import app_logger
+from bot.core.logging import app_logger, log_error_with_metrics
 
 
 class TaskName(Enum):
@@ -229,6 +229,42 @@ class TaskControlService:
             return count
         except Exception as e:
             app_logger.error(f"Failed to cleanup old tasks: {e}", error=str(e))
+            log_error_with_metrics(
+                error_type="cleanup_service_error",
+                component="task_control_service",
+                severity="error",
+                message=f"Failed to cleanup old tasks: {e}",
+                operation="cleanup_old_tasks",
+                days_old=days_old,
+                error=str(e)
+            )
+            raise
+
+    async def cleanup_hanging_tasks(self, hours_old: int = 2) -> int:
+        """
+        Очистить задачи в статусе running, которые работают дольше указанного времени.
+
+        Args:
+            hours_old: Количество часов для считания задач зависшими
+
+        Returns:
+            Количество обработанных задач
+        """
+        try:
+            count = await self.uow.task_status.cleanup_hanging_tasks(hours_old)
+            app_logger.info(f"Cleaned up {count} hanging tasks")
+            return count
+        except Exception as e:
+            app_logger.error(f"Failed to cleanup hanging tasks: {e}", error=str(e))
+            log_error_with_metrics(
+                error_type="cleanup_service_error",
+                component="task_control_service",
+                severity="error",
+                message=f"Failed to cleanup hanging tasks: {e}",
+                operation="cleanup_hanging_tasks",
+                hours_old=hours_old,
+                error=str(e)
+            )
             raise
 
     async def get_user_active_tasks(self, user_id: int) -> list[dict[str, Any]]:
